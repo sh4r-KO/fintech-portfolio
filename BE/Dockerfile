@@ -3,5 +3,5 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-ENV PORT=8080
-CMD ["uvicorn","app:app","--host","0.0.0.0","--port","8080"]
+# Bind to the port Cloud Run provides
+CMD ["uvicorn","app:app","--host","0.0.0.0","--port","${PORT:-8080}"]

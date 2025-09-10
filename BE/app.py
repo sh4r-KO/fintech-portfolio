@@ -9,6 +9,13 @@ from pathlib import Path
 APP_DIR = Path(__file__).parent
 DATA_PATH = APP_DIR / "data" / "projects.json"
 
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
 
 app = FastAPI(title="Fintech Portfolio API", version="1.0.0")
 
