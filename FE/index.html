@@ -1,0 +1,70 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>[Your Name] — Fintech & PySpark Portfolio</title>
+    <meta name="description" content="Portfolio showcasing fintech data engineering projects with PySpark/HDFS." />
+    <meta property="og:title" content="Fintech & PySpark Portfolio" />
+    <meta property="og:description" content="Projects in data engineering, streaming, and analytics." />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <header class="container header">
+        <div>
+            <h1>[Your Name]</h1>
+            <p class="muted">Fintech • Data Engineering • PySpark/HDFS</p>
+        </div>
+        <nav>
+            <a href="#projects">Projects</a>
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+        </nav>
+    </header>
+
+
+    <main class="container">
+        <section id="hero" class="hero">
+            <h2>Building reliable data systems for finance.</h2>
+            <p>Streaming risk scoring, batch ETL, and analytics pipelines at scale.</p>
+        </section>
+
+
+        <section id="controls" class="controls">
+            <input id="search" type="search" placeholder="Search projects (tech, title, tags)" />
+            <div id="tags" class="tags"></div>
+        </section>
+
+
+        <section id="projects" class="grid"></section>
+
+
+        <section id="about" class="about">
+            <h2>About</h2>
+            <p>CS major focused on data-intensive systems. Comfortable with PySpark, HDFS, Kafka, Airflow, and Python
+                APIs. I like turning messy financial data into fast, trustworthy products.</p>
+        </section>
+
+
+        <section id="contact" class="contact">
+            <h2>Contact</h2>
+            <form id="contactForm">
+                <div class="row"><label>Name<input name="name" required></label></div>
+                <div class="row"><label>Email<input name="email" type="email" required></label></div>
+                <div class="row"><label>Message<textarea name="message" required></textarea></label></div>
+                <button type="submit">Send</button>
+                <small id="contactStatus" class="muted"></small>
+            </form>
+        </section>
+    </main>
+
+
+    <footer class="container footer"><small>© <span id="y"></span> [Your Name]</small></footer>
+    <script src="app.js"></script>
+    <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body>
+
+</html>

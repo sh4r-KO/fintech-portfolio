@@ -1,0 +1,41 @@
+[
+{
+"id": "pyspark-risk-scorer",
+"slug": "pyspark-risk-scorer",
+"title": "Real-time Credit Risk Scorer",
+"summary": "Streaming credit risk scoring pipeline using PySpark Structured Streaming, Kafka, and HDFS; exposes low-latency features to a model API.",
+"tags": ["fintech", "streaming", "ml"],
+"tech": ["PySpark", "HDFS", "Kafka", "FastAPI", "Docker"],
+"problem": "Banks need sub-second risk estimates for card transactions to reduce fraud and declines.",
+"approach": "Ingest transactions via Kafka, aggregate features in PySpark over sliding windows, persist checkpoints on HDFS, and serve features to a FastAPI model endpoint.",
+"results": "Achieved 95th percentile latency of 350 ms with feature completeness > 99.9% over 50M events/day.",
+"cover_image": "assets/risk-scorer.png",
+"links": {
+"github": "https://github.com/you/risk-scorer",
+"demo": "https://demo.example.com/risk"
+},
+"metrics": {
+"rows_processed": 50000000,
+"latency_ms": 350,
+"cost_savings_pct": 18.5
+}
+},
+{
+"id": "etl-pipeline-pyspark",
+"slug": "etl-pipeline-pyspark",
+"title": "Batch ETL on HDFS for Transaction Analytics",
+"summary": "A daily PySpark ETL that denormalizes merchant/transaction data into Parquet with data quality checks and partitioning.",
+"tags": ["fintech", "etl"],
+"tech": ["PySpark", "HDFS", "Airflow", "Parquet"],
+"problem": "Analysts need consistent, queryable transaction data with SLAs for BI and anomaly detection.",
+"approach": "Airflow DAG orchestrates PySpark jobs on YARN; enforce schema with expectations; write partitioned Parquet to HDFS and register external tables.",
+"results": "Cut analyst query times by 67% and reduced load failures by 90% via automated checks.",
+"cover_image": "assets/etl-analytics.png",
+"links": {
+"github": "https://github.com/you/etl-pipeline"
+},
+"metrics": {
+"rows_processed": 220000000
+}
+}
+]
