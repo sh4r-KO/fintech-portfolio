@@ -60,7 +60,7 @@ class Contact(BaseModel):
 with open(DATA_PATH, "r", encoding="utf-8") as f:
     PROJECTS = [Project(**p) for p in json.load(f)]
 INDEX_BY_SLUG = {p.slug: p for p in PROJECTS}
-
+#e
 
 @app.get("/api/health")
 def health():
