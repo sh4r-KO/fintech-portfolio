@@ -1,10 +1,5 @@
 Fintech Portfolio Starter — Python (FastAPI) + JS/HTML/CSS
 
-
-## Quick start
-1. **Backend**
-```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app:app --reload --port 8000
+https://dash.cloudflare.com/c800955a49e55b8a2f25aae0386536c2/pages/view/fintech-portfolio
+https://console.cloud.google.com/run/detail/europe-west1/fintech-portfolio/observability/metrics?project=beaming-theorem-471715-v0
+https://fintech-portfolio.pages.dev/
