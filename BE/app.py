@@ -159,3 +159,57 @@ def compound(payload: CompoundInput):
         total_interest=total_interest,
         points=points
     )
+import io
+import matplotlib.pyplot as plt
+from fastapi.responses import StreamingResponse
+
+@app.post("/api/finance/compound/plot")
+def compound_plot(payload: CompoundInput):
+    P = payload.principal
+    r = payload.rate_pct / 100.0
+    n = payload.compounds_per_year
+    t_years = payload.years
+    contrib = payload.contribution
+
+    periods = int(n * t_years)
+    balance = P
+    total_contrib = 0.0
+
+    times = []
+    balances = []
+    principals = []
+    contribs = []
+    interests = []
+
+    for k in range(periods + 1):
+        t = k / n
+        interest_val = balance - P - total_contrib
+        times.append(t)
+        balances.append(balance)
+        principals.append(P)
+        contribs.append(total_contrib)
+        interests.append(interest_val)
+
+        balance *= (1 + r / n)
+        balance += contrib
+        total_contrib += contrib
+
+    # ---- Make plot ----
+    fig, ax = plt.subplots(figsize=(6,4))
+    ax.plot(times, balances, label="Balance", color="blue")
+    ax.plot(times, [P+tc for tc in contribs], label="Principal+Contrib", color="green", linestyle="--")
+    ax.fill_between(times, [P+tc for tc in contribs], balances, alpha=0.3, color="orange", label="Interest")
+
+    ax.set_title("Compound Interest Growth")
+    ax.set_xlabel("Years")
+    ax.set_ylabel("Balance (€)")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    buf = io.BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format="png")
+    plt.close(fig)
+    buf.seek(0)
+
+    return StreamingResponse(buf, media_type="image/png")

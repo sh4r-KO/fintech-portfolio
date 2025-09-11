@@ -2,3 +2,4 @@ fastapi==0.115.0
 uvicorn==0.30.6           # or uvicorn[standard]==0.30.6
 pydantic[email]==2.9.1    # <-- important (installs email-validator)
 python-multipart==0.0.9
+matplotlib==3.9.2
