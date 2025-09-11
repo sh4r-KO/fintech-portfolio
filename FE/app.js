@@ -10,21 +10,24 @@ async function fetchJSON(url, opts = {}) {
 
 // ---------- card template ----------
 function renderCard(p) {
-  const cover = p.cover_image || '';
-  const tags = [...(p.tags || []), ...(p.tech || [])];
-  const shownTags = tags.slice(0, 4).map(t => `<span class="chip chip-small">${t}</span>`).join('');
-  const summary = (p.summary || '').replace(/</g, '&lt;');
+  let link = '';
+  // map project titles/slugs to their page
+  if (p.slug === 'compound') link = 'compound.html';
+  else if (p.slug === 'stocks') link = 'stocks.html';
+  else if (p.slug === 'forex') link = 'forex.html';
+  else link = 'project.html?slug=' + encodeURIComponent(p.slug);
+
   return `
-    <a class="card" href="project.html?slug=${encodeURIComponent(p.slug)}" aria-label="${p.title}">
-      <div class="card-media" style="${cover ? `background-image:url('${cover}')` : ''}"></div>
+    <a class="card" href="${link}">
+      <div class="card-media" style="background-image:url('${p.cover_image || ''}')"></div>
       <div class="card-body">
-        <h3 style="margin:0 0 6px">${p.title}</h3>
-        <p class="muted line-clamp-2">${summary}</p>
-        <div class="card-chips">${shownTags}</div>
+        <h3>${p.title}</h3>
+        <p class="muted">${p.summary || ''}</p>
       </div>
     </a>
   `;
 }
+
 
 // ---------- home page renderer ----------
 async function renderHome() {
@@ -97,8 +100,12 @@ async function renderHome() {
     searchInput.addEventListener('input', apply);
   }
 
+
+  
   // first paint
   apply();
+
+
 }
 
 // ---------- contact form ----------

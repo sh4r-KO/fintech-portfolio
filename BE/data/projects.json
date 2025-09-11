@@ -1,30 +1,30 @@
 [
     {
-        "id": "demo",
+        "id": "fx",
         "slug": "demo",
-        "title": "Demo Project",
-        "summary": "Hello from Cloud Run.",
+        "title": "Foreign exchange",
+        "summary": "A foreign exchange rate API, with real-time and historical data.",
         "tags": [
-            "demo"
+            "API", "forex" ,"finance","python3"
         ],
         "tech": [
-            "FastAPI"
+            "FastAPI","matplotlib"
         ]
     },
     {
-        "id": "demo2",
+        "id": "comp",
         "slug": "demo",
-        "title": "Demo Project",
-        "summary": "Hello from Cloud Run.",
+        "title": "Compound interest calculator",
+        "summary": "a quick compound interest calculator API, with real-time and historical data.",
         "tags": [
-            "demo"
+            "API", "finance","python3"
         ],
         "tech": [
-            "FastAPI"
+            "FastAPI", "matplotlib"
         ]
     },
     {
-        "id": "demo3",
+        "id": "stock",
         "slug": "demo",
         "title": "Demo Project",
         "summary": "Hello from Cloud Run.",
