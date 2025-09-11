@@ -361,3 +361,130 @@ async def fx_plot(payload: FXInput):
     plt.savefig(buf, format="png")
     plt.close(fig); buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
+# --- Stocks (Alpha Vantage: Monthly Adjusted) ---
+import os, io, json, math
+from datetime import date, timedelta, datetime
+import httpx
+import matplotlib.pyplot as plt
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
+ALPHA_KEY = os.getenv("ALPHAVANTAGE_API_KEY")  # set this in Cloud Run/env
+
+class StockInput(BaseModel):
+    symbol: str
+    period: str = Field(pattern="^(1mo|3mo|6mo|1y|5y|10y|ytd|max)$")
+
+class StockSeriesPoint(BaseModel):
+    date: str
+    close: float
+
+class StockSeriesOut(BaseModel):
+    symbol: str
+    first_date: str
+    last_date: str
+    rows: int
+    period: str
+    close_first: float
+    close_last: float
+    change_abs: float
+    change_pct: float
+    # We return just meta; plotting handled by /plot. (Add points if you want.)
+
+_PERIOD_TO_DAYS = {
+    "1mo": 30, "3mo": 90, "6mo": 180, "1y": 365,
+    "5y": 365*5, "10y": 365*10, "ytd": "ytd", "max": None,
+}
+
+def _filter_period(dates, closes, period):
+    if _PERIOD_TO_DAYS[period] is None:
+        return dates, closes
+    if _PERIOD_TO_DAYS[period] == "ytd":
+        start = date(date.today().year, 1, 1)
+    else:
+        start = date.today() - timedelta(days=_PERIOD_TO_DAYS[period])
+    out_d, out_c = [], []
+    for d, c in zip(dates, closes):
+        if d >= start:
+            out_d.append(d); out_c.append(c)
+    return out_d, out_c
+
+def _parse_alpha_series(js):
+    KEY = "Monthly Adjusted Time Series"
+    if KEY not in js:
+        msg = js.get("Note") or js.get("Error Message") or "Unexpected response"
+        raise HTTPException(status_code=502, detail=msg)
+    series = js[KEY]
+    dates, closes = [], []
+    for k, v in series.items():
+        try:
+            dt = datetime.strptime(k, "%Y-%m-%d").date()
+            cv = float(v.get("4. close") or v.get("5. adjusted close") or v.get("4. Close", 0.0))
+            dates.append(dt); closes.append(cv)
+        except Exception:
+            pass
+    z = sorted(zip(dates, closes), key=lambda x: x[0])
+    dates = [d for d,_ in z]; closes = [c for _,c in z]
+    if len(dates) < 2:
+        raise HTTPException(status_code=502, detail="Alpha Vantage returned too few rows.")
+    return dates, closes
+
+async def _fetch_monthly_adjusted(symbol: str):
+    if not ALPHA_KEY:
+        raise HTTPException(status_code=500, detail="ALPHAVANTAGE_API_KEY not configured")
+    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol={symbol}&apikey={ALPHA_KEY}"
+    async with httpx.AsyncClient(timeout=20) as client:
+        r = await client.get(url)
+        r.raise_for_status()
+        return r.json()
+
+@app.post("/api/stocks/series", response_model=StockSeriesOut)
+async def stocks_series(payload: StockInput):
+    sym = payload.symbol.strip().upper()
+    js = await _fetch_monthly_adjusted(sym)
+    dates, closes = _parse_alpha_series(js)
+    dates, closes = _filter_period(dates, closes, payload.period)
+    if len(dates) < 2:
+        raise HTTPException(status_code=502, detail="No rows after filtering")
+    first, last = dates[0], dates[-1]
+    c0, c1 = closes[0], closes[-1]
+    change_abs = c1 - c0
+    change_pct = (change_abs / c0) * 100 if c0 else 0.0
+    return StockSeriesOut(
+        symbol=sym, first_date=str(first), last_date=str(last), rows=len(dates),
+        period=payload.period, close_first=c0, close_last=c1,
+        change_abs=change_abs, change_pct=change_pct
+    )
+
+@app.post("/api/stocks/plot")
+async def stocks_plot(payload: StockInput):
+    sym = payload.symbol.strip().upper()
+    js = await _fetch_monthly_adjusted(sym)
+    dates, closes = _parse_alpha_series(js)
+    dates, closes = _filter_period(dates, closes, payload.period)
+
+    X = list(range(len(dates)))
+    fig, ax = plt.subplots(figsize=(7.6, 4.2))
+
+    # Filled area under the curve + line on top
+    ax.fill_between(X, 0, closes, alpha=0.25, color="#9ecae1", label="Close (area)")
+    ax.plot(X, closes, linewidth=1.6, color="#1f77b4", label="Close")
+
+    ax.set_title(f"{sym} — {payload.period} (Monthly Adjusted)")
+    ax.set_ylabel("Close")
+    ax.set_xlabel("Date")
+
+    step = max(1, len(dates)//6)
+    xticks = list(range(0, len(dates), step))
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([str(dates[i]) for i in xticks], rotation=30, ha="right")
+
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(dict(zip(labels, handles)).values(), dict(zip(labels, handles)).keys(), frameon=False)
+    ax.grid(True, alpha=0.3)
+
+    buf = io.BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format="png")
+    plt.close(fig); buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png")
