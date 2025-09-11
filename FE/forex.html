@@ -1,92 +1,99 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FX Converter — Fintech & PySpark Portfolio</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FX Converter — Fintech & PySpark Portfolio</title>
+    <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
-  <header class="container header">
-    <a href="/" class="logo">← Home</a>
-    <nav>
-      <a href="/#projects">Projects</a>
-      <a href="compound.html">Calculator</a>
-      <a href="forex.html">FX</a>
-      <a href="/#about">About</a>
-      <a href="/#contact">Contact</a>
-    </nav>
-  </header>
+    <header class="container header">
+        <a href="/" class="logo">← Home</a>
+        <nav>
+            <a href="/#projects">Projects</a>
+            <a href="compound.html">Calculator</a>
+            <a href="forex.html">FX</a>
+            <a href="/#about">About</a>
+            <a href="/#contact">Contact</a>
+        </nav>
+    </header>
 
-  <main class="container">
-    <section class="about">
-      <h2>Foreign Exchange (FX) — Converter & Filled Chart</h2>
-      <form id="fxForm">
-        <div class="row"><label>Amount<input name="amount" type="number" step="any" value="1000" required></label></div>
-        <div class="row"><label>From<select name="base" id="fxBase"></select></label></div>
-        <div class="row"><label>To<select name="quote" id="fxQuote"></select></label></div>
-        <div class="row"><label>Lookback (days)<input name="lookback_days" type="number" min="2" max="3650" value="180" required></label></div>
-        <button type="submit">Convert & Plot</button>
-        <small id="fxStatus" class="muted"></small>
-      </form>
+    <main class="container">
+        <section class="about">
+            <h2>Foreign Exchange (FX) — Converter & Filled Chart</h2>
+            <form id="fxForm">
+                <div class="row"><label>Amount<input name="amount" type="number" step="any" value="1000"
+                            required></label></div>
+                <div class="row two-col">
+                    <label>From<select name="base" id="fxBase"></select></label>
+                    <label>To<select name="quote" id="fxQuote"></select></label>
+                </div>
 
-      <div id="fxResults" class="article" style="display:none">
-        <h3>Result</h3>
-        <ul class="metrics" id="fxSummary"></ul>
-        <div id="fxChartWrap" style="margin-top:10px; display:none">
-          <h3>Chart</h3>
-          <img id="fxChart" style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" alt="FX chart">
-        </div>
-      </div>
-    </section>
-  </main>
+                <div class="row"><label>Lookback (days)<input name="lookback_days" type="number" min="2" max="3650"
+                            value="180" required></label></div>
+                <button type="submit">Convert & Plot</button>
+                <small id="fxStatus" class="muted"></small>
+            </form>
 
-  <footer class="container footer"><small>© <span id="y"></span> [Your Name]</small></footer>
+            <div id="fxResults" class="article" style="display:none">
+                <h3>Result</h3>
+                <ul class="metrics" id="fxSummary"></ul>
+                <div id="fxChartWrap" style="margin-top:10px; display:none">
+                    <h3>Chart</h3>
+                    <img id="fxChart" style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" alt="FX chart">
+                </div>
+            </div>
+        </section>
+    </main>
 
-  <script>window.API_BASE="https://fintech-portfolio-546985714630.europe-west1.run.app";</script>
-  <script>
-    document.getElementById('y').textContent = new Date().getFullYear();
+    <footer class="container footer"><small>© <span id="y"></span> [Your Name]</small></footer>
 
-    const form = document.getElementById('fxForm');
-    const statusEl = document.getElementById('fxStatus');
-    const resultsWrap = document.getElementById('fxResults');
-    const summaryEl = document.getElementById('fxSummary');
-    const baseSel = document.getElementById('fxBase');
-    const quoteSel = document.getElementById('fxQuote');
+    <script>window.API_BASE = "https://fintech-portfolio-546985714630.europe-west1.run.app";</script>
+    <script>
+        document.getElementById('y').textContent = new Date().getFullYear();
 
-    // populate currencies from backend (or fallback list if call fails)
-    (async () => {
-      try {
-        const res = await fetch(`${window.API_BASE}/api/fx/currencies`);
-        const list = res.ok ? await res.json() : ["USD","EUR","GBP","JPY"];
-        baseSel.innerHTML = list.map(c => `<option value="${c}">${c}</option>`).join('');
-        quoteSel.innerHTML = baseSel.innerHTML;
-        baseSel.value = "USD"; quoteSel.value = "EUR";
-      } catch { /* fallback */ 
-        baseSel.innerHTML = `<option>USD</option><option>EUR</option>`;
-        quoteSel.innerHTML = baseSel.innerHTML;
-      }
-    })();
+        const form = document.getElementById('fxForm');
+        const statusEl = document.getElementById('fxStatus');
+        const resultsWrap = document.getElementById('fxResults');
+        const summaryEl = document.getElementById('fxSummary');
+        const baseSel = document.getElementById('fxBase');
+        const quoteSel = document.getElementById('fxQuote');
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      statusEl.textContent = 'Calculating…';
-      resultsWrap.style.display = 'none';
-      const data = Object.fromEntries(new FormData(form).entries());
-      ['amount','lookback_days'].forEach(k => data[k] = Number(data[k]));
+        // populate currencies from backend (or fallback list if call fails)
+        (async () => {
+            try {
+                const res = await fetch(`${window.API_BASE}/api/fx/currencies`);
+                const list = res.ok ? await res.json() : ["USD", "EUR", "GBP", "JPY"];
+                baseSel.innerHTML = list.map(c => `<option value="${c}">${c}</option>`).join('');
+                quoteSel.innerHTML = baseSel.innerHTML;
+                baseSel.value = "USD"; quoteSel.value = "EUR";
+            } catch { /* fallback */
+                baseSel.innerHTML = `<option>USD</option><option>EUR</option>`;
+                quoteSel.innerHTML = baseSel.innerHTML;
+            }
+        })();
 
-      try {
-        // JSON summary
-        const res = await fetch(`${window.API_BASE}/api/fx/convert`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error('convert failed');
-        const out = await res.json();
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            statusEl.textContent = 'Calculating…';
+            resultsWrap.style.display = 'none';
+            const data = Object.fromEntries(new FormData(form).entries());
+            ['amount', 'lookback_days'].forEach(k => data[k] = Number(data[k]));
 
-        const fmt = (x, d=2) => Number(x).toLocaleString(undefined, {maximumFractionDigits:d});
-        const color = out.change_abs >= 0 ? '#34d399' : '#ef4444';
-        summaryEl.innerHTML = `
+            try {
+                // JSON summary
+                const res = await fetch(`${window.API_BASE}/api/fx/convert`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw new Error('convert failed');
+                const out = await res.json();
+
+                const fmt = (x, d = 2) => Number(x).toLocaleString(undefined, { maximumFractionDigits: d });
+                const color = out.change_abs >= 0 ? '#34d399' : '#ef4444';
+                summaryEl.innerHTML = `
           <li><strong>Last date:</strong> ${out.last_date}</li>
           <li><strong>Final value:</strong> ${fmt(out.final_value)} ${data.quote}</li>
           <li><strong>Baseline (${out.first_date} @ ${fmt(out.baseline_rate, 6)}):</strong>
@@ -94,30 +101,31 @@
           <li><strong>Change vs baseline:</strong>
               <span style="color:${color}">${fmt(out.change_abs)} ${data.quote} (${fmt(out.change_pct)}%)</span></li>
         `;
-        resultsWrap.style.display = '';
+                resultsWrap.style.display = '';
 
-        // PNG chart
-        const chartWrap = document.getElementById('fxChartWrap');
-        const chartImg  = document.getElementById('fxChart');
-        const resImg = await fetch(`${window.API_BASE}/api/fx/plot`, {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify(data)
+                // PNG chart
+                const chartWrap = document.getElementById('fxChartWrap');
+                const chartImg = document.getElementById('fxChart');
+                const resImg = await fetch(`${window.API_BASE}/api/fx/plot`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (resImg.ok) {
+                    const blob = await resImg.blob();
+                    const prev = chartImg.dataset.url;
+                    if (prev) URL.revokeObjectURL(prev);
+                    const url = URL.createObjectURL(blob);
+                    chartImg.src = url; chartImg.dataset.url = url;
+                    chartWrap.style.display = '';
+                } else {
+                    chartWrap.style.display = 'none';
+                }
+                statusEl.textContent = '';
+            } catch (err) {
+                statusEl.textContent = 'Error. Please check inputs and try again.';
+            }
         });
-        if (resImg.ok) {
-          const blob = await resImg.blob();
-          const prev = chartImg.dataset.url;
-          if (prev) URL.revokeObjectURL(prev);
-          const url = URL.createObjectURL(blob);
-          chartImg.src = url; chartImg.dataset.url = url;
-          chartWrap.style.display = '';
-        } else {
-          chartWrap.style.display = 'none';
-        }
-        statusEl.textContent = '';
-      } catch (err) {
-        statusEl.textContent = 'Error. Please check inputs and try again.';
-      }
-    });
-  </script>
+    </script>
 </body>
+
 </html>
