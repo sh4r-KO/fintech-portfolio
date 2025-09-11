@@ -5,7 +5,7 @@ if (e.target.classList.contains('chip')) {
     activeTag = e.target.textContent;
     apply();
 }
-});
+//});
 
 
 searchInput.addEventListener('input', apply);
@@ -30,7 +30,7 @@ if (form) {
         }
     });
 }
-}
+//}
 
 
 async function renderProject() {

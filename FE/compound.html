@@ -86,6 +86,7 @@
 
                 const chartWrap = document.getElementById('ciChartWrap');
                 const chartImg = document.getElementById('ciChart');
+                document.getElementById( 'ciChartWrap' ).scrollIntoView();
 
                 const resImg = await fetch(`${window.API_BASE}/api/finance/compound/plot`, {
                     method: 'POST',
@@ -97,7 +98,6 @@
                     chartImg.src = URL.createObjectURL(blob);
                     chartWrap.style.display = '';
                 }
-
 
                 // Summary
                 const fmt = x => Number(x).toLocaleString(undefined, { maximumFractionDigits: 2 });

@@ -14,10 +14,7 @@ APP_DIR = Path(__file__).parent
 DATA_PATH = APP_DIR / "data" / "projects.json"
 
 app = FastAPI(title="Fintech Portfolio API", version="1.0.0")
-#app.add_middleware(
-#    CORSMiddleware, allow_origins=["*"], allow_credentials=True,
-#    allow_methods=["*"], allow_headers=["*"]
-#)
+
 
 class Link(BaseModel):
     github: Optional[str] = None
@@ -370,7 +367,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 ALPHA_KEY = os.getenv("ALPHAVANTAGE_API_KEY")  # set this in Cloud Run/env
-
 class StockInput(BaseModel):
     symbol: str
     period: str = Field(pattern="^(1mo|3mo|6mo|1y|5y|10y|ytd|max)$")
