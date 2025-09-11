@@ -82,3 +82,16 @@ def contact(payload: Contact):
     (APP_DIR / "contact_inbox.txt").write_text(
         f"{payload.name} <{payload.email}>: {payload.message}\n", encoding="utf-8")
     return {"ok": True}
+
+
+# BE/app.py
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=[
+    "https://fintech-portfolio.pages.dev/",
+    "https://portfolio.yourdomain.com"  # when you add it
+  ],
+  allow_credentials=True,
+  allow_methods=["GET","POST"],
+  allow_headers=["Content-Type"],
+)
