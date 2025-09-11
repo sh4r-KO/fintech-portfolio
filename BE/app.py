@@ -5,6 +5,11 @@ from typing import List, Optional
 from pathlib import Path
 import json
 
+import io
+import matplotlib.pyplot as plt
+from fastapi.responses import StreamingResponse
+
+
 APP_DIR = Path(__file__).parent
 DATA_PATH = APP_DIR / "data" / "projects.json"
 
@@ -159,9 +164,6 @@ def compound(payload: CompoundInput):
         total_interest=total_interest,
         points=points
     )
-import io
-import matplotlib.pyplot as plt
-from fastapi.responses import StreamingResponse
 
 @app.post("/api/finance/compound/plot")
 def compound_plot(payload: CompoundInput):
@@ -195,16 +197,31 @@ def compound_plot(payload: CompoundInput):
         total_contrib += contrib
 
     # ---- Make plot ----
-    fig, ax = plt.subplots(figsize=(6,4))
-    ax.plot(times, balances, label="Balance", color="blue")
-    ax.plot(times, [P+tc for tc in contribs], label="Principal+Contrib", color="green", linestyle="--")
-    ax.fill_between(times, [P+tc for tc in contribs], balances, alpha=0.3, color="orange", label="Interest")
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    base = [P + tc for tc in contribs]  # principal + total contributions at each time
+
+    # Fill the base amount
+    ax.fill_between(times, 0, base, alpha=0.35, color="#9ecae1", label="Principal + Contrib")
+
+    # Fill the interest (gap between base and balance)
+    ax.fill_between(times, base, balances, alpha=0.6, color="#fdd0a2", label="Interest")
+
+    # Lines on top for clarity
+    ax.plot(times, balances, color="blue", linewidth=2, label="Balance")
+    ax.plot(times, base, color="green", linestyle="--", label="Principal + Contrib (line)")
 
     ax.set_title("Compound Interest Growth")
     ax.set_xlabel("Years")
     ax.set_ylabel("Balance (€)")
-    ax.legend()
+
+    # De-duplicate legend labels (optional)
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys(), frameon=False)
+
     ax.grid(True, alpha=0.3)
+
 
     buf = io.BytesIO()
     plt.tight_layout()

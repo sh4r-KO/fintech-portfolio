@@ -114,12 +114,7 @@
                 if (pts.length > 2) {
                     const sample = pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 40)) === 0);
                     const max = Math.max(...sample.map(p => p.balance));
-                    const blocks = '▁▂▃▄▅▆▇█';
-                    const line = sample.map(p => {
-                        const idx = Math.min(blocks.length - 1, Math.floor((p.balance / max) * (blocks.length - 1)));
-                        return blocks[idx];
-                    }).join('');
-                    miniChart.textContent = `Balance: ${line}`;
+
                 }
                 statusEl.textContent = '';
             } catch (err) {
