@@ -71,6 +71,7 @@ body {
     border-radius: 999px;
     padding: 6px 10px;
     background: #fff;
+    color: var(--fg);   /* <— add this */
     cursor: pointer
 }
 
