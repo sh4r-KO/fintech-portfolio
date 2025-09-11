@@ -95,3 +95,68 @@ app.add_middleware(
   allow_methods=["GET","POST"],
   allow_headers=["Content-Type"],
 )
+
+
+# --- Compound Interest API ---
+
+from pydantic import Field
+
+class CompoundInput(BaseModel):
+    principal: float = Field(ge=0)
+    rate_pct: float = Field(ge=0)          # annual rate in %
+    years: float = Field(ge=0)
+    compounds_per_year: int = Field(gt=0)
+    contribution: float = Field(ge=0)      # recurring per-period
+
+class CompoundPoint(BaseModel):
+    t: float
+    balance: float
+    principal: float
+    contributed: float
+    interest: float
+
+class CompoundOutput(BaseModel):
+    final_value: float
+    principal: float
+    total_contributions: float
+    total_interest: float
+    points: List[CompoundPoint]
+
+@app.post("/api/finance/compound", response_model=CompoundOutput)
+def compound(payload: CompoundInput):
+    P = payload.principal
+    r = payload.rate_pct / 100.0
+    n = payload.compounds_per_year
+    t_years = payload.years
+    contrib = payload.contribution
+
+    periods = int(n * t_years)
+    balance = P
+    total_contrib = 0.0
+
+    points: List[CompoundPoint] = []
+    for k in range(periods + 1):
+        t = k / n
+        interest_val = balance - P - total_contrib
+        points.append(CompoundPoint(
+            t=t,
+            balance=balance,
+            principal=P,
+            contributed=total_contrib,
+            interest=interest_val
+        ))
+        # advance one period
+        balance *= (1 + r / n)
+        balance += contrib
+        total_contrib += contrib
+
+    final = points[-1].balance
+    total_interest = final - P - total_contrib
+
+    return CompoundOutput(
+        final_value=final,
+        principal=P,
+        total_contributions=total_contrib,
+        total_interest=total_interest,
+        points=points
+    )
