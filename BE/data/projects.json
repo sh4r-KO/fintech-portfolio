@@ -37,5 +37,18 @@
         "tech": [
             "FastAPI","matplotlib"
         ]
+    },
+    {
+        "id": "tbd",
+        "slug": "tbd",
+        "title": "tbd",
+        "summary": "to be determined",
+        "cover_image": "images/stock.jpg",
+        "tags": [
+            "none"
+        ],
+        "tech": [
+            "none"
+        ]
     }
 ]
