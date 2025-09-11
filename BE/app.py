@@ -104,6 +104,8 @@ app.add_middleware(
 
 # --- Compound Interest API ---
 
+from pydantic import Field
+
 
 class CompoundInput(BaseModel):
     principal: float = Field(ge=0)
@@ -229,4 +231,133 @@ def compound_plot(payload: CompoundInput):
     plt.close(fig)
     buf.seek(0)
 
+    return StreamingResponse(buf, media_type="image/png")
+
+
+# --- FX Converter API ---
+
+from datetime import date, timedelta
+import io, math
+import httpx
+import matplotlib.pyplot as plt
+from fastapi.responses import StreamingResponse
+
+FX_CURRENCIES = ["USD","EUR","GBP","JPY","AUD","CAD","CHF","CNY","SEK","NZD","MXN",
+                 "SGD","HKD","NOK","KRW","TRY","INR","BRL","ZAR","AED","SAR","PLN",
+                 "TWD","THB","DKK","MYR","IDR","PHP","CZK","HUF","ILS","CLP"]
+
+class FXInput(BaseModel):
+    amount: float
+    base: str
+    quote: str
+    lookback_days: int
+
+class FXOutput(BaseModel):
+    last_date: str
+    first_date: str
+    points: int
+    baseline_rate: float
+    baseline_value: float
+    final_value: float
+    change_abs: float
+    change_pct: float
+
+@app.get("/api/fx/currencies", response_model=List[str])
+def fx_currencies():
+    return FX_CURRENCIES
+
+async def _fetch_timeseries(base: str, quote: str, start_s: str, end_s: str):
+    # Frankfurter API (no key): matches the PyScript version you shared
+    url = f"https://api.frankfurter.dev/v1/{start_s}..{end_s}?base={base}&symbols={quote}"
+    async with httpx.AsyncClient(timeout=15) as client:
+        r = await client.get(url)
+        r.raise_for_status()
+        data = r.json()
+    # data: {"amount":1.0,"base":"USD","start_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD","rates":{date:{quote:rate}}}
+    rates = data.get("rates", {})
+    items = sorted(rates.items(), key=lambda kv: kv[0])  # [(date, {quote:rate}), ...]
+    xs, ys = [], []
+    for d, one in items:
+        v = one.get(quote)
+        if isinstance(v, (int, float)) and math.isfinite(v):
+            xs.append(d); ys.append(float(v))
+    if len(xs) < 2:
+        raise HTTPException(status_code=502, detail="Not enough FX data")
+    return xs, ys
+
+@app.post("/api/fx/convert", response_model=FXOutput)
+async def fx_convert(payload: FXInput):
+    if payload.amount <= 0 or payload.lookback_days < 2:
+        raise HTTPException(status_code=400, detail="Invalid amount or lookback")
+    if payload.base == payload.quote:
+        raise HTTPException(status_code=400, detail="Base and quote must differ")
+    end = date.today()
+    start = end - timedelta(days=payload.lookback_days)
+    start_s, end_s = start.isoformat(), end.isoformat()
+
+    xs, rates = await _fetch_timeseries(payload.base, payload.quote, start_s, end_s)
+    values = [payload.amount * r for r in rates]
+    baseline_rate = rates[0]
+    baseline_value = payload.amount * baseline_rate
+    final_value = values[-1]
+    change_abs = final_value - baseline_value
+    change_pct = (change_abs / baseline_value) * 100 if baseline_value else 0.0
+
+    return FXOutput(
+        last_date=xs[-1], first_date=xs[0], points=len(xs),
+        baseline_rate=baseline_rate, baseline_value=baseline_value,
+        final_value=final_value, change_abs=change_abs, change_pct=change_pct
+    )
+
+@app.post("/api/fx/plot")
+async def fx_plot(payload: FXInput):
+    # Same validation
+    if payload.amount <= 0 or payload.lookback_days < 2 or payload.base == payload.quote:
+        raise HTTPException(status_code=400, detail="Bad inputs")
+    end = date.today()
+    start = end - timedelta(days=payload.lookback_days)
+    start_s, end_s = start.isoformat(), end.isoformat()
+
+    xs, rates = await _fetch_timeseries(payload.base, payload.quote, start_s, end_s)
+    values = [payload.amount * r for r in rates]
+    baseline_rate = rates[0]
+    baseline_value = payload.amount * baseline_rate
+
+    deltas = [v - baseline_value for v in values]
+    X = list(range(len(xs)))
+    y_baseline = [baseline_value] * len(values)
+    y_actual = values
+
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+
+    # Stacked fill: baseline (light) + gains/losses (green/red)
+    ax.fill_between(X, 0, y_baseline, alpha=0.35, color="#9ecae1", label="Baseline value")
+
+    pos = [max(0.0, d) for d in deltas]
+    if any(p > 0 for p in pos):
+        ax.fill_between(X, y_baseline, [b+p for b,p in zip(y_baseline, pos)],
+                        where=[p>0 for p in pos], alpha=0.6, color="#34d399", label="Gain vs baseline")
+    neg = [min(0.0, d) for d in deltas]
+    if any(n < 0 for n in neg):
+        ax.fill_between(X, y_baseline, [b+n for b,n in zip(y_baseline, neg)],
+                        where=[n<0 for n in neg], alpha=0.5, color="#ef4444", label="Loss vs baseline")
+
+    ax.plot(X, y_actual, linewidth=1.5, color="#1f77b4", label="Actual value")
+
+    ax.set_title(f"{payload.amount:,.0f} {payload.base} in {payload.quote} over time")
+    ax.set_ylabel(f"Value in {payload.quote}")
+    ax.set_xlabel("Date")
+
+    step = max(1, len(xs)//6)
+    xticks = list(range(0, len(xs), step))
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([xs[i] for i in xticks], rotation=30, ha="right")
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(dict(zip(labels, handles)).values(), dict(zip(labels, handles)).keys(), frameon=False)
+    ax.grid(True, alpha=0.3)
+
+    buf = io.BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format="png")
+    plt.close(fig); buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
