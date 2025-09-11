@@ -6,7 +6,7 @@
         "summary": "A foreign exchange rate API, with real-time and historical data.",
         "cover_image": "images/forex.jpg",
         "tags": [
-            "API", "forex" ,"finance","python3"
+            "API","forex","finance","python3"
         ],
         "tech": [
             "FastAPI","matplotlib"
@@ -17,13 +17,12 @@
         "slug": "compound",
         "title": "Compound interest calculator",
         "summary": "A quick compound interest calculator API, with real-time and historical data.",
-                "cover_image": "images/compound.jpg",
-
+        "cover_image": "images/compound.jpg",
         "tags": [
-            "API", "finance","python3"
+            "API","finance","python3"
         ],
         "tech": [
-            "FastAPI", "matplotlib"
+            "FastAPI","matplotlib"
         ]
     },
     {
@@ -31,13 +30,12 @@
         "slug": "stocks",
         "title": "Stock prices",
         "summary": "a simple stock retrieval API, with real-time and historical data.",
-                "cover_image": "images/stock.jpg",
-
+        "cover_image": "images/stock.jpg",
         "tags": [
-            "API", "finance","python3", "stocks"
+            "API","finance","python3","stocks"
         ],
         "tech": [
-            "FastAPI", "matplotlib"
+            "FastAPI","matplotlib"
         ]
-    }   
+    }
 ]
