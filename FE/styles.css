@@ -242,3 +242,68 @@ select {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* --- Card Enhancements --- */
+.card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(0,0,0,.02);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.06);
+}
+
+/* Maintain consistent media height; use cover images if available */
+.card-media {
+  position: relative;
+  height: 160px;                /* consistent banner height */
+  background-size: cover;
+  background-position: center;
+  background-color: #f8fafc;
+}
+
+/* Subtle gradient and title pop on hover */
+.card-media::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.38), rgba(0,0,0,0));
+  opacity: .0; transition: opacity .15s ease;
+}
+.card:hover .card-media::after { opacity: 1; }
+
+.card-title-on-media {
+  position: absolute; left: 12px; bottom: 10px; right: 12px;
+  color: #fff; font-weight: 700; font-size: 1.05rem;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
+}
+
+/* Body: clamp summary so all cards feel even */
+.card-body {
+  padding: 14px;
+  min-height: 120px;            /* keeps heights aligned */
+  display: grid; gap: 8px;
+}
+
+/* Two-line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* Tiny chips row inside card */
+.card-chips {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.card-chips .chip-small {
+  background: #f8fafc;
+}

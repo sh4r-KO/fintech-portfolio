@@ -86,8 +86,10 @@
 
                 const chartWrap = document.getElementById('ciChartWrap');
                 const chartImg = document.getElementById('ciChart');
-                document.getElementById( 'ciChartWrap' ).scrollIntoView();
-
+                window.scroll({
+                    bottom: 100,
+                    behavior: "smooth",
+                });
                 const resImg = await fetch(`${window.API_BASE}/api/finance/compound/plot`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -97,6 +99,9 @@
                     const blob = await resImg.blob();
                     chartImg.src = URL.createObjectURL(blob);
                     chartWrap.style.display = '';
+
+                    // Scroll smoothly to the chart
+                    chartWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
 
                 // Summary
