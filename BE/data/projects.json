@@ -10,17 +10,5 @@
         "tech": [
             "FastAPI"
         ]
-    },
-     {
-        "id": "demo",
-        "slug": "demo",
-        "title": "Demo Project",
-        "summary": "Hello from Cloud Run.",
-        "tags": [
-            "demo"
-        ],
-        "tech": [
-            "FastAPI"
-        ]
-    }
+    }   
 ]

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr,Field
 from typing import List, Optional
 from pathlib import Path
 import json
@@ -9,10 +9,10 @@ APP_DIR = Path(__file__).parent
 DATA_PATH = APP_DIR / "data" / "projects.json"
 
 app = FastAPI(title="Fintech Portfolio API", version="1.0.0")
-app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_credentials=True,
-    allow_methods=["*"], allow_headers=["*"]
-)
+#app.add_middleware(
+#    CORSMiddleware, allow_origins=["*"], allow_credentials=True,
+#    allow_methods=["*"], allow_headers=["*"]
+#)
 
 class Link(BaseModel):
     github: Optional[str] = None
@@ -88,18 +88,17 @@ def contact(payload: Contact):
 app.add_middleware(
   CORSMiddleware,
   allow_origins=[
-    "https://fintech-portfolio.pages.dev/",
+    "https://fintech-portfolio.pages.dev",
     "https://portfolio.yourdomain.com"  # when you add it
   ],
   allow_credentials=True,
-  allow_methods=["GET","POST"],
+  allow_methods=["GET","POST","OPTIONS"],
   allow_headers=["Content-Type"],
 )
 
 
 # --- Compound Interest API ---
 
-from pydantic import Field
 
 class CompoundInput(BaseModel):
     principal: float = Field(ge=0)
