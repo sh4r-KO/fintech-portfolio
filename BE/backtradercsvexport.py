@@ -67,6 +67,13 @@ DATA_DIRS = [
     Path("backtrade/DataManagement/data/stooq"),        # fetch_stooq_daily.py output
 ]
 
+from pathlib import Path
+ROOT = Path(__file__).parent
+GRAPHS_DIR = ROOT / "backtrade" / "output" / "graphs"
+PRETTY_DIR = ROOT / "backtrade" / "output" / "pretty"
+GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
+PRETTY_DIR.mkdir(parents=True, exist_ok=True)
+
 # ────────────────────────── HELPER FUNCTIONS ──────────────────────────
 DOWNLOADED_ONCE: set[str] = set()   # symbols we already tried to fetch locally
 
@@ -484,8 +491,8 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
         if sell_ser is not None:
             aps.append(mpf.make_addplot(sell_ser, type='scatter', marker='v', markersize=80))
 
-        pretty_dir = Path("backtrade/output/pretty"); pretty_dir.mkdir(parents=True, exist_ok=True)
-        pretty_png = pretty_dir / f"{symbol}_{strat_cls.__name__}.png"
+        pretty_png = PRETTY_DIR / f"{symbol}_{strat_cls.__name__}.png"
+
 
         mpf.plot(
             df, type='line', volume=True, mav=(12, 26),
@@ -526,7 +533,8 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
 
 
 def creategraph(row: dict, thresholds: dict) -> None:
-    outdir = Path("backtrade/output/graphs")
+    outdir = GRAPHS_DIR
+
     outdir.mkdir(exist_ok=True)
 
     symbol = row.get("Symbol")

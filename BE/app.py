@@ -504,22 +504,23 @@ from pathlib import Path
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 
+# mêmes dossiers que ci-dessus
 APP_DIR = Path(__file__).parent
 GRAPHS_DIR = APP_DIR / "backtrade" / "output" / "graphs"
-GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/graphs", StaticFiles(directory=str(GRAPHS_DIR)), name="graphs")
-
-
-APP_DIR = Path(__file__).parent
 PRETTY_DIR = APP_DIR / "backtrade" / "output" / "pretty"
+GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
 PRETTY_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount("/graphs", StaticFiles(directory=str(GRAPHS_DIR)), name="graphs")
 app.mount("/pretty", StaticFiles(directory=str(PRETTY_DIR)), name="pretty")
 
-#APP_DIR = Path(__file__).parent
-#CHARTS_DIR = APP_DIR / "output" / "graphs"
-#CHARTS_DIR.mkdir(parents=True, exist_ok=True)
-# serve files like https://.../graphs/Calmar.png
-#app.mount("/graphs", StaticFiles(directory=str(CHARTS_DIR)), name="graphs")
+def _clear_plots():
+    for d in (GRAPHS_DIR, PRETTY_DIR):
+        d.mkdir(parents=True, exist_ok=True)
+        for p in d.glob("*.png"):
+            try: p.unlink()
+            except Exception as e: print(f"[warn] delete failed {p}: {e}")
+
 
 
 from pydantic import BaseModel, ConfigDict
@@ -570,6 +571,7 @@ def api_backtest(req: BacktestRequest):
 
     try:
         _clear_graphs_dir()
+        _clear_plots() 
         result = backtester.run_one(
             req.symbol,
             StratCls,
@@ -591,9 +593,9 @@ def api_backtest(req: BacktestRequest):
     charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
     pp = PRETTY_DIR / f"{req.symbol}_{req.strategy}.png"
 
-    plot = f"/pretty/{req.symbol}_{req.strategy}.png" if pp.exists() else None
+    plot = f"/pretty/{req.symbol}_{req.strategy}.png"
     
-    return {"ok": True, "metrics": result, "charts": charts, "plot": plot }
+    return {"ok": True, "metrics": result, "charts": charts, "plot": plot , "pretty": str(pp) }
 
 
 

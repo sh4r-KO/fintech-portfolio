@@ -138,59 +138,75 @@
         });
         if (!res.ok) throw new Error('backtest failed');
         const out = await res.json();
+        renderResults(out);
 
-        // KPIs
-        const m = out.metrics || {};
-        const fmt = (x, d = 4) =>
-          (x === null || x === undefined || Number.isNaN(x)) ? '—' :
-            Number(x).toLocaleString(undefined, { maximumFractionDigits: d });
-        metricsEl.innerHTML = Object.entries(m).map(([k, v]) => {
-          const label = k.replaceAll('_', ' ');
-          return `<li><strong>${label}:</strong> ${fmt(v)}</li>`;
-        }).join('');
+        // ------- Results renderer (clean) -------
+        const ABS = (u) => /^https?:\/\//i.test(u) ? u : (window.API_BASE.replace(/\/$/, '') + u);
 
+        function formatValue(key, val) {
+          if (typeof val === 'string') return val || '—';
+          if (val === null || val === undefined || !isFinite(Number(val))) return '—';
 
-
-        // helper
-        const toAbs = (u) => /^https?:\/\//i.test(u)
-          ? u
-          : (window.API_BASE.replace(/\/$/, '') + u);
-
-        // render
-        const plots = Array.isArray(out.charts) ? out.charts : (out.plot ? [out.plot] : []);
-        if (plots.length) {
-          plotsEl.innerHTML = plots.map(u => `
-              <img src="${toAbs(u)}" alt="backtest plot"
-                  style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
-              `).join('');
-          plotWrap.style.display = '';
+          // pourcentages
+          const pctKeys = ['TotalReturn_%', 'rnorm100_%', 'MaxDrawdown_%', 'WinRate_%'];
+          if (pctKeys.includes(key)) {
+            return (Number(val) * 100).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' %';
+          }
+          // nombres "normaux"
+          const digits = Math.abs(Number(val)) >= 100 ? 2 : 4;
+          return Number(val).toLocaleString(undefined, { maximumFractionDigits: digits });
         }
 
-
-
-        
-        // Single big plot from `out.plot`
-        const abs = (u) => /^https?:\/\//i.test(u) ? u : (window.API_BASE.replace(/\/$/, '') + u);
-
-        if (out.plot) {
-          const src = abs(out.plot); // cache-bust
-          plotsEl.innerHTML = `
-            <img id="btPretty" src="${src}" alt="strategy plot"
-                style="width:100%;max-width:1200px;border:1px solid #e5e7eb;border-radius:12px" 
-                onload="this.scrollIntoView({behavior:'smooth'})"
-                onerror="this.closest('#btPlotWrap').style.display='none';">
-            `;
-          plotWrap.style.display = '';
-        } else {
+        function renderResults(out) {
+          // reset
+          resultsWrap.style.display = 'none';
           plotWrap.style.display = 'none';
+          metricsEl.innerHTML = '';
+          plotsEl.innerHTML = '';
+
+          // ----- KPIs -----
+          const m = out?.metrics || {};
+          const order = [
+            'Symbol', 'Strategy', 'TotalReturn_%', 'rnorm100_%', 'SharpeDaily', 'SharpeAnnual',
+            'Calmar', 'MaxDrawdown_%', 'TimeDD_bars', 'VWR', 'SQN', 'WinRate_%',
+            'ProfitFactor', 'AvgTradePL', 'trades_total', 'Sortino'
+          ];
+
+          const rows = [];
+          order.forEach(k => (k in m) && rows.push([k, m[k]]));
+          // ajoute tout le reste (si présent)
+          Object.keys(m).forEach(k => { if (!order.includes(k)) rows.push([k, m[k]]); });
+
+          metricsEl.innerHTML = rows.map(([k, v]) => {
+            const label = k.replaceAll('_', ' ');
+            return `<li><strong>${label}:</strong> ${formatValue(k, v)}</li>`;
+          }).join('');
+
+          // ----- Plot -----
+          if (out?.plot) {
+            const src = ABS(out.plot);                   // gros "pretty" plot
+            plotsEl.innerHTML = `
+      <img id="btPretty" src="${src}" alt="backtest plot"
+           style="width:100%;max-width:1200px;border:1px solid #e5e7eb;border-radius:12px"
+           onload="this.scrollIntoView({behavior:'smooth'})"
+           onerror="this.closest('#btPlotWrap').style.display='none';">
+    `;
+            plotWrap.style.display = '';
+          } else if (Array.isArray(out?.charts) && out.charts.length) {
+            // fallback: petites images KPI
+            plotsEl.innerHTML = out.charts.map(u => `
+      <img src="${ABS(u)}" alt="backtest plot"
+           style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
+    `).join('');
+            plotWrap.style.display = '';
+          }
+
+          resultsWrap.style.display = '';
+          statusEl.textContent = '';
         }
 
 
 
-
-
-        resultsWrap.style.display = '';
-        statusEl.textContent = '';
       } catch (err) {
         console.error(err);
         statusEl.textContent = 'Error running backtest. Please check inputs and try again.';
