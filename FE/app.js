@@ -173,3 +173,47 @@ async function renderProject() {
 // ---------- boot ----------
 renderHome();
 renderProject();
+
+
+
+// app.js
+function api(base, path) {
+  const trimmed = (base || "").replace(/\/+$/, "");
+  return `${trimmed}${path}`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("backtestForm");
+  const out  = document.getElementById("out");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      // Match exactly what your backend expects:
+      symbol: form.symbol.value.trim(),
+      initial_cash: Number(form.cash.value),
+      // add other params needed by your endpoint…
+    };
+
+    try {
+      const res = await fetch(api(window.API_BASE, "/api/backtest"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      // If CORS is misconfigured, you’ll see a network error before this line.
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} – ${text || "backtest failed"}`);
+      }
+
+      const data = await res.json();
+      out.textContent = JSON.stringify(data, null, 2);
+    } catch (err) {
+      out.textContent = `Request error: ${err.message}`;
+      console.error(err);
+    }
+  });
+});

@@ -499,9 +499,23 @@ CHARTS_DIR = Path("output/charts")
 CHARTS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/plots", StaticFiles(directory=str(CHARTS_DIR)), name="plots")
 
+from pydantic import BaseModel, ConfigDict
+from typing import Optional
+
 class BacktestRequest(BaseModel):
+    # Explicitly allow extra keys to be ignored
+    model_config = ConfigDict(extra='ignore')
+
     symbol: str
     strategy: str
+
+    # Optional knobs your page sends (use them in your backtester if supported)
+    start_period: Optional[str] = None   # "YYYY-MM-DD"
+    end_period: Optional[str] = None
+    starting_capital: Optional[float] = None
+    commission: Optional[float] = None
+    slippage: Optional[float] = None
+
 
 def _resolve_strategy(name: str):
     import importlib
@@ -517,17 +531,37 @@ def api_strategies():
     strats_mod = importlib.import_module("strats")
     return {"items": [cls.__name__ for cls in strats_mod.retall()]}
 
+from fastapi import HTTPException
+
 @app.post("/api/backtest")
 def api_backtest(req: BacktestRequest):
-    print(f"[/api/backtest] {req.symbol=} {req.strategy=}")
+    print(f"[/api/backtest] symbol={req.symbol} strategy={req.strategy}")
 
-    import importlib
-    backtester = importlib.import_module("backtradercsvexport")
-    StratCls = _resolve_strategy(req.strategy)
+    # Load backtester + strategy safely
     try:
-        result = backtester.run_one(req.symbol, StratCls)
+        backtester = importlib.import_module("backtradercsvexport")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Import backtester failed: {e}")
+
+    try:
+        StratCls = _resolve_strategy(req.strategy)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Run the backtest
+    try:
+        result = backtester.run_one(
+            req.symbol,
+            StratCls,
+            # If your backtester supports these, pass them through:
+            start_period=req.start_period,
+            end_period=req.end_period,
+            starting_capital=req.starting_capital,
+            commission=req.commission,
+            slippage=req.slippage,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Backtest failed: {e}")
+
     pngs = sorted([f"/plots/{p.name}" for p in CHARTS_DIR.glob(f"{req.symbol}_{req.strategy}_*.png")])
     return {"ok": True, "metrics": result, "plots": pngs}
-#
