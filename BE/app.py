@@ -499,9 +499,7 @@ from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-APP_DIR = Path(__file__).parent
-CHARTS_DIR = APP_DIR / "output" / "graphs"
-CHARTS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
@@ -512,8 +510,16 @@ GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/graphs", StaticFiles(directory=str(GRAPHS_DIR)), name="graphs")
 
 
+APP_DIR = Path(__file__).parent
+PRETTY_DIR = APP_DIR / "backtrade" / "output" / "pretty"
+PRETTY_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/pretty", StaticFiles(directory=str(PRETTY_DIR)), name="pretty")
+
+#APP_DIR = Path(__file__).parent
+#CHARTS_DIR = APP_DIR / "output" / "graphs"
+#CHARTS_DIR.mkdir(parents=True, exist_ok=True)
 # serve files like https://.../graphs/Calmar.png
-app.mount("/graphs", StaticFiles(directory=str(CHARTS_DIR)), name="graphs")
+#app.mount("/graphs", StaticFiles(directory=str(CHARTS_DIR)), name="graphs")
 
 
 from pydantic import BaseModel, ConfigDict
@@ -588,7 +594,6 @@ def api_backtest(req: BacktestRequest):
     return {"ok": True, "metrics": result, "charts": charts, "plot": plot }
 
 
-    return {"ok": True, "metrics": result, "charts": charts}
 
 
 from fastapi.responses import JSONResponse
