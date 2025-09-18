@@ -503,6 +503,15 @@ APP_DIR = Path(__file__).parent
 CHARTS_DIR = APP_DIR / "output" / "graphs"
 CHARTS_DIR.mkdir(parents=True, exist_ok=True)
 
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+APP_DIR = Path(__file__).parent
+GRAPHS_DIR = APP_DIR / "backtrade" / "output" / "graphs"
+GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/graphs", StaticFiles(directory=str(GRAPHS_DIR)), name="graphs")
+
+
 # serve files like https://.../graphs/Calmar.png
 app.mount("/graphs", StaticFiles(directory=str(CHARTS_DIR)), name="graphs")
 
@@ -568,13 +577,13 @@ def api_backtest(req: BacktestRequest):
 
     # names produced by your gauge code
     png_names = [
-        "Calmar.png","MaxDrawdown_%.png","ProfitFactor.png","rnorm100_%.png",
-        "SharpeAnnual.png","SharpeDaily.png","Sortino.png","SQN.png",
-        "TimeDD_bars.png","TotalReturn_%.png","VWR.png","WinRate_%.png"
+    "Calmar.png","MaxDrawdown_%.png","ProfitFactor.png","rnorm100_%.png",
+    "SharpeAnnual.png","SharpeDaily.png","Sortino.png","SQN.png",
+    "TimeDD_bars.png","TotalReturn_%.png","VWR.png","WinRate_%.png"
     ]
+    charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
+    return {"ok": True, "metrics": result, "charts": charts}
 
-    # Only include the ones that exist
-    charts = [f"/graphs/{name}" for name in png_names if (CHARTS_DIR / name).exists()]
 
     return {"ok": True, "metrics": result, "charts": charts}
 

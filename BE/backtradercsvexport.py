@@ -35,8 +35,9 @@ from typing import Dict, Any, List
 import math
 import numpy as np
 from pathlib import Path
-from DataManagement.av_downloader import av_doawnloader_main
-from DataManagement.fetch_stooq_daily import import_stooq
+from backtrade.DataManagement.av_downloader import av_doawnloader_main
+from backtrade.DataManagement.fetch_stooq_daily import import_stooq
+
 from datetime import datetime
 
 from strats import *
@@ -62,8 +63,8 @@ CSV_PATH = load_output_csv(CONFIG_FILE)
 MINBARS = 252
 
 DATA_DIRS = [
-    Path("DataManagement/data/alpha"),        # av_downloader.py output
-    Path("DataManagement/data/stooq"),        # fetch_stooq_daily.py output
+    Path("backtrade/DataManagement/data/alpha"),        # av_downloader.py output
+    Path("backtrade/DataManagement/data/stooq"),        # fetch_stooq_daily.py output
 ]
 
 # ────────────────────────── HELPER FUNCTIONS ──────────────────────────
