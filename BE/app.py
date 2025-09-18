@@ -589,7 +589,9 @@ def api_backtest(req: BacktestRequest):
     "TimeDD_bars.png","TotalReturn_%.png","VWR.png","WinRate_%.png"
     ]
     charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
-    plot = f"/pretty/{req.symbol}_{req.strategy}.png" # SPY_GoldenCross.png
+    pp = PRETTY_DIR / f"{req.symbol}_{req.strategy}.png"
+
+    plot = f"/pretty/{pp.name}?v={int(time.time())}" if pp.exists() else None
     
     return {"ok": True, "metrics": result, "charts": charts, "plot": plot }
 
@@ -616,3 +618,15 @@ def _clear_graphs_dir():
                 p.unlink()  # Python 3.11 supports missing_ok=True if you prefer
             except Exception as e:
                 print(f"[warn] failed to delete {p}: {e}")
+
+from starlette.requests import Request
+
+@app.middleware("http")
+async def no_cache_images(request: Request, call_next):
+    resp = await call_next(request)
+    p = request.url.path
+    if p.startswith("/pretty") or p.startswith("/graphs"):
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+    return resp
