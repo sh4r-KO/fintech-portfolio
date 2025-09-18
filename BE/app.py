@@ -533,7 +533,7 @@ def _resolve_strategy(name: str):
 
 @app.get("/api/strategies")
 def api_strategies():
-    import importlib
+    #import importlib
     strats_mod = importlib.import_module("strats")
     #return {"items": [cls.__name__ for cls in strats_mod.retall()]}
     return {"items": ["SMA20Cross", "RSI", "MACD"]}  # hardcoded for now
