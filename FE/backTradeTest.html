@@ -22,6 +22,7 @@
     <section class="about">
       <h2>Backtrader — Strategy Runner</h2>
 
+      <!-- FORM -->
       <form id="btForm">
         <div class="row two-col">
           <label>Symbol
@@ -60,6 +61,7 @@
         <small id="btStatus" class="muted"></small>
       </form>
 
+      <!-- RESULTS -->
       <div id="btResults" class="article" style="display:none">
         <h3>KPIs</h3>
         <ul class="metrics" id="btMetrics"></ul>
@@ -68,36 +70,49 @@
           <h3>Plot</h3>
           <div id="btPlots" class="grid" style="gap:12px"></div>
         </div>
+
+        <div id="btKpiWrap" style="margin-top:10px; display:none">
+          <h3>KPI Images</h3>
+          <div id="btKpiImgs" class="grid" style="gap:12px"></div>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="container footer"><small>© <span id="y"></span> [Aguirre Cabrol]</small></footer>
+  <footer class="container footer">
+    <small>© <span id="y"></span> [Aguirre Cabrol]</small>
+  </footer>
 
   <script>
-    // ----- config & refs -----
+    // --------- Config & DOM refs ---------
     window.API_BASE = "https://fintech-portfolio-546985714630.europe-west1.run.app";
     document.getElementById('y').textContent = new Date().getFullYear();
 
-    const sel = document.getElementById('btStrategy');
-    const statusEl = document.getElementById('btStatus');
-    const resultsWrap = document.getElementById('btResults');
-    const metricsEl = document.getElementById('btMetrics');
-    const plotWrap = document.getElementById('btPlotWrap');
-    const plotsEl = document.getElementById('btPlots');
+    const sel        = document.getElementById('btStrategy');
+    const statusEl   = document.getElementById('btStatus');
+    const resultsWrap= document.getElementById('btResults');
+    const metricsEl  = document.getElementById('btMetrics');
+    const plotWrap   = document.getElementById('btPlotWrap');
+    const plotsEl    = document.getElementById('btPlots');
+    const kpiWrap    = document.getElementById('btKpiWrap');
+    const kpiImgsEl  = document.getElementById('btKpiImgs');
 
-    // ----- helpers used by renderer (declared BEFORE use) -----
+    // --------- Helpers (declared before use) ---------
     const ABS = (u) => /^https?:\/\//i.test(u) ? u : (window.API_BASE.replace(/\/$/, '') + u);
+
+    const toNum = (x) => {
+      if (x === null || x === undefined || x === '') return undefined;
+      const n = Number(String(x).replace(',', '.'));
+      return Number.isFinite(n) ? n : undefined;
+    };
 
     function formatValue(key, val) {
       if (typeof val === 'string') return val || '—';
       if (val === null || val === undefined || !isFinite(Number(val))) return '—';
-
-      // percentage-like keys are fractions in data; show as %
       const pctKeys = ['TotalReturn_%', 'rnorm100_%', 'MaxDrawdown_%', 'WinRate_%'];
       if (pctKeys.includes(key)) {
         return (Number(val) * 100).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' %';
-      }
+        }
       const digits = Math.abs(Number(val)) >= 100 ? 2 : 4;
       return Number(val).toLocaleString(undefined, { maximumFractionDigits: digits });
     }
@@ -106,48 +121,68 @@
       // reset
       resultsWrap.style.display = 'none';
       plotWrap.style.display = 'none';
+      kpiWrap.style.display = 'none';
       metricsEl.innerHTML = '';
-      plotsEl.innerHTML = '';
+      plotsEl.innerHTML   = '';
+      kpiImgsEl.innerHTML = '';
 
-      // KPIs
+      // ----- KPIs (numbers) -----
       const m = out?.metrics || {};
       const order = [
-        'Symbol', 'Strategy', 'TotalReturn_%', 'rnorm100_%', 'SharpeDaily', 'SharpeAnnual',
-        'Calmar', 'MaxDrawdown_%', 'TimeDD_bars', 'VWR', 'SQN', 'WinRate_%',
-        'ProfitFactor', 'AvgTradePL', 'trades_total', 'Sortino'
+        'Symbol','Strategy','TotalReturn_%','rnorm100_%','SharpeDaily','SharpeAnnual',
+        'Calmar','MaxDrawdown_%','TimeDD_bars','VWR','SQN','WinRate_%',
+        'ProfitFactor','AvgTradePL','trades_total','Sortino'
       ];
-
       const rows = [];
       order.forEach(k => (k in m) && rows.push([k, m[k]]));
       Object.keys(m).forEach(k => { if (!order.includes(k)) rows.push([k, m[k]]); });
+      metricsEl.innerHTML = rows.map(([k,v]) =>
+        `<li><strong>${k.replaceAll('_',' ')}:</strong> ${formatValue(k,v)}</li>`
+      ).join('');
 
-      metricsEl.innerHTML = rows.map(([k, v]) => {
-        const label = k.replaceAll('_', ' ');
-        return `<li><strong>${label}:</strong> ${formatValue(k, v)}</li>`;
-      }).join('');
-
-      // Plot (prefer big pretty plot; else fallback to charts array)
+      // ----- Big pretty plot (if provided) -----
       if (out?.plot) {
         const src = ABS(out.plot);
         plotsEl.innerHTML = `
           <img id="btPretty" src="${src}" alt="backtest plot"
                style="width:100%;max-width:1200px;border:1px solid #e5e7eb;border-radius:12px"
+               onload="this.scrollIntoView({behavior:'smooth'})"
                onerror="this.closest('#btPlotWrap').style.display='none';">
         `;
         plotWrap.style.display = '';
-      } else if (Array.isArray(out?.charts) && out.charts.length) {
-        plotsEl.innerHTML = out.charts.map(u => `
-          <img src="${ABS(u)}" alt="backtest plot"
-               style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
+      }
+
+      // ----- KPI images grid (12 PNGs in fixed order; only those returned) -----
+      const KPI_ORDER = [
+        "Calmar.png","MaxDrawdown_%.png","ProfitFactor.png","rnorm100_%.png",
+        "SharpeAnnual.png","SharpeDaily.png","Sortino.png","SQN.png",
+        "TimeDD_bars.png","TotalReturn_%.png","VWR.png","WinRate_%.png"
+      ];
+      const urls = Array.isArray(out?.charts) ? out.charts.map(ABS) : [];
+      const ordered = KPI_ORDER
+        .map(name => urls.find(u => u.endsWith('/' + name) || u.includes('/' + name)))
+        .filter(Boolean);
+
+      if (ordered.length) {
+        const caption = (u) => {
+          const fn = u.split('/').pop().split('?')[0];
+          return fn.replace('.png','').replaceAll('_',' ').replace('%','%');
+        };
+        kpiImgsEl.innerHTML = ordered.map(u => `
+          <figure style="margin:0">
+            <img src="${u}" alt="${caption(u)}"
+                 style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
+            <figcaption class="muted" style="text-align:center;margin-top:4px">${caption(u)}</figcaption>
+          </figure>
         `).join('');
-        plotWrap.style.display = '';
+        kpiWrap.style.display = '';
       }
 
       resultsWrap.style.display = '';
       statusEl.textContent = '';
     }
 
-    // ----- strategy dropdown -----
+    // --------- Strategy dropdown ---------
     (async () => {
       try {
         const res = await fetch(`${window.API_BASE}/api/strategies`);
@@ -159,20 +194,15 @@
       }
     })();
 
-    // ----- helpers for numbers (accept commas) -----
-    const toNum = (x) => {
-      if (x === null || x === undefined || x === '') return undefined;
-      const n = Number(String(x).replace(',', '.'));
-      return isFinite(n) ? n : undefined;
-    };
-
-    // ----- submit handler -----
+    // --------- Submit handler ---------
     document.getElementById('btForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       statusEl.textContent = 'Running…';
       resultsWrap.style.display = 'none';
       plotWrap.style.display = 'none';
+      kpiWrap.style.display = 'none';
       plotsEl.innerHTML = '';
+      kpiImgsEl.innerHTML = '';
 
       const fd = new FormData(e.currentTarget);
       const payload = {
@@ -192,7 +222,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error('backtest failed');
+        if (!res.ok) {
+          const msg = await res.text().catch(()=>'');
+          throw new Error(`backtest failed: ${msg || res.status}`);
+        }
         const out = await res.json();
         renderResults(out);
       } catch (err) {

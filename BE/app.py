@@ -593,9 +593,9 @@ def api_backtest(req: BacktestRequest):
     charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
     pp = PRETTY_DIR / f"{req.symbol}_{req.strategy}.png"
 
-    plot = f"/pretty/{req.symbol}_{req.strategy}.png"
+    #plot = f"/pretty/{req.symbol}_{req.strategy}.png"
     
-    return {"ok": True, "metrics": result, "charts": charts, "plot": plot , "pretty": str(pp) }
+    return {"ok": True, "metrics": result, "charts": charts,  "plot": str(pp) }
 
 
 
