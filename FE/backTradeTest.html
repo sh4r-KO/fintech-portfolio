@@ -21,6 +21,7 @@
   <main class="container">
     <section class="about">
       <h2>Backtrader — Strategy Runner</h2>
+
       <form id="btForm">
         <div class="row two-col">
           <label>Symbol
@@ -40,20 +41,19 @@
           </label>
         </div>
 
-        <div class="row three-col">
+        <div class="row two-col">
           <label>Starting capital
             <input name="starting_capital" id="btCash" type="number" step="any" value="10000" />
           </label>
           <label>Commission (fraction)
-            <input name="commission" id="btComm" type="number" step="any" value="0.001" />
+            <input name="commission" id="btComm" type="text" value="0.001" />
           </label>
+        </div>
 
-
-          <div class="row">
-            <label>Slippage (fraction)
-              <input name="slippage" id="btSlip" type="number" step="any" value="0.01" />
-            </label>
-          </div>
+        <div class="row">
+          <label>Slippage (fraction)
+            <input name="slippage" id="btSlip" type="text" value="0.01" />
+          </label>
         </div>
 
         <button type="submit">Run Backtest</button>
@@ -65,13 +65,8 @@
         <ul class="metrics" id="btMetrics"></ul>
 
         <div id="btPlotWrap" style="margin-top:10px; display:none">
-          <h3>Plot(s)</h3>
+          <h3>Plot</h3>
           <div id="btPlots" class="grid" style="gap:12px"></div>
-        </div>
-
-        <div id="btKpiPngWrap" style="margin-top:10px; display:none">
-          <h3>KPI Images</h3>
-          <div id="btKpiPngs" class="grid" style="gap:12px"></div>
         </div>
       </div>
     </section>
@@ -80,6 +75,7 @@
   <footer class="container footer"><small>© <span id="y"></span> [Aguirre Cabrol]</small></footer>
 
   <script>
+    // ----- config & refs -----
     window.API_BASE = "https://fintech-portfolio-546985714630.europe-west1.run.app";
     document.getElementById('y').textContent = new Date().getFullYear();
 
@@ -89,10 +85,69 @@
     const metricsEl = document.getElementById('btMetrics');
     const plotWrap = document.getElementById('btPlotWrap');
     const plotsEl = document.getElementById('btPlots');
-    const kpiWrap = document.getElementById('btKpiPngWrap');
-    const kpiEl = document.getElementById('btKpiPngs');
 
-    // Populate strategies from backend
+    // ----- helpers used by renderer (declared BEFORE use) -----
+    const ABS = (u) => /^https?:\/\//i.test(u) ? u : (window.API_BASE.replace(/\/$/, '') + u);
+
+    function formatValue(key, val) {
+      if (typeof val === 'string') return val || '—';
+      if (val === null || val === undefined || !isFinite(Number(val))) return '—';
+
+      // percentage-like keys are fractions in data; show as %
+      const pctKeys = ['TotalReturn_%', 'rnorm100_%', 'MaxDrawdown_%', 'WinRate_%'];
+      if (pctKeys.includes(key)) {
+        return (Number(val) * 100).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' %';
+      }
+      const digits = Math.abs(Number(val)) >= 100 ? 2 : 4;
+      return Number(val).toLocaleString(undefined, { maximumFractionDigits: digits });
+    }
+
+    function renderResults(out) {
+      // reset
+      resultsWrap.style.display = 'none';
+      plotWrap.style.display = 'none';
+      metricsEl.innerHTML = '';
+      plotsEl.innerHTML = '';
+
+      // KPIs
+      const m = out?.metrics || {};
+      const order = [
+        'Symbol', 'Strategy', 'TotalReturn_%', 'rnorm100_%', 'SharpeDaily', 'SharpeAnnual',
+        'Calmar', 'MaxDrawdown_%', 'TimeDD_bars', 'VWR', 'SQN', 'WinRate_%',
+        'ProfitFactor', 'AvgTradePL', 'trades_total', 'Sortino'
+      ];
+
+      const rows = [];
+      order.forEach(k => (k in m) && rows.push([k, m[k]]));
+      Object.keys(m).forEach(k => { if (!order.includes(k)) rows.push([k, m[k]]); });
+
+      metricsEl.innerHTML = rows.map(([k, v]) => {
+        const label = k.replaceAll('_', ' ');
+        return `<li><strong>${label}:</strong> ${formatValue(k, v)}</li>`;
+      }).join('');
+
+      // Plot (prefer big pretty plot; else fallback to charts array)
+      if (out?.plot) {
+        const src = ABS(out.plot);
+        plotsEl.innerHTML = `
+          <img id="btPretty" src="${src}" alt="backtest plot"
+               style="width:100%;max-width:1200px;border:1px solid #e5e7eb;border-radius:12px"
+               onerror="this.closest('#btPlotWrap').style.display='none';">
+        `;
+        plotWrap.style.display = '';
+      } else if (Array.isArray(out?.charts) && out.charts.length) {
+        plotsEl.innerHTML = out.charts.map(u => `
+          <img src="${ABS(u)}" alt="backtest plot"
+               style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
+        `).join('');
+        plotWrap.style.display = '';
+      }
+
+      resultsWrap.style.display = '';
+      statusEl.textContent = '';
+    }
+
+    // ----- strategy dropdown -----
     (async () => {
       try {
         const res = await fetch(`${window.API_BASE}/api/strategies`);
@@ -104,33 +159,34 @@
       }
     })();
 
-    // Form submit → run backtest
+    // ----- helpers for numbers (accept commas) -----
+    const toNum = (x) => {
+      if (x === null || x === undefined || x === '') return undefined;
+      const n = Number(String(x).replace(',', '.'));
+      return isFinite(n) ? n : undefined;
+    };
+
+    // ----- submit handler -----
     document.getElementById('btForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       statusEl.textContent = 'Running…';
       resultsWrap.style.display = 'none';
       plotWrap.style.display = 'none';
-      kpiWrap.style.display = 'none';
       plotsEl.innerHTML = '';
-      kpiEl.innerHTML = '';
 
       const fd = new FormData(e.currentTarget);
       const payload = {
-        symbol: fd.get('symbol')?.trim() || undefined,
-        // name must match the backend: "strategy" (or "strat")
+        symbol: (fd.get('symbol') || '').trim() || undefined,
         strategy: fd.get('strategy') || fd.get('strat') || undefined,
         start_period: fd.get('start_period') || undefined,
         end_period: fd.get('end_period') || undefined,
-        starting_capital: fd.get('starting_capital') ? Number(fd.get('starting_capital')) : undefined,
-        commission: fd.get('commission') ? Number(fd.get('commission')) : undefined,
-        slippage: fd.get('slippage') ? Number(fd.get('slippage')) : undefined,
+        starting_capital: toNum(fd.get('starting_capital')),
+        commission: toNum(fd.get('commission')),
+        slippage: toNum(fd.get('slippage')),
       };
-      // strip undefineds
       Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
 
-
       try {
-        console.log('payload', payload)
         const res = await fetch(`${window.API_BASE}/api/backtest`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -139,74 +195,6 @@
         if (!res.ok) throw new Error('backtest failed');
         const out = await res.json();
         renderResults(out);
-
-        // ------- Results renderer (clean) -------
-        const ABS = (u) => /^https?:\/\//i.test(u) ? u : (window.API_BASE.replace(/\/$/, '') + u);
-
-        function formatValue(key, val) {
-          if (typeof val === 'string') return val || '—';
-          if (val === null || val === undefined || !isFinite(Number(val))) return '—';
-
-          // pourcentages
-          const pctKeys = ['TotalReturn_%', 'rnorm100_%', 'MaxDrawdown_%', 'WinRate_%'];
-          if (pctKeys.includes(key)) {
-            return (Number(val) * 100).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' %';
-          }
-          // nombres "normaux"
-          const digits = Math.abs(Number(val)) >= 100 ? 2 : 4;
-          return Number(val).toLocaleString(undefined, { maximumFractionDigits: digits });
-        }
-
-        function renderResults(out) {
-          // reset
-          resultsWrap.style.display = 'none';
-          plotWrap.style.display = 'none';
-          metricsEl.innerHTML = '';
-          plotsEl.innerHTML = '';
-
-          // ----- KPIs -----
-          const m = out?.metrics || {};
-          const order = [
-            'Symbol', 'Strategy', 'TotalReturn_%', 'rnorm100_%', 'SharpeDaily', 'SharpeAnnual',
-            'Calmar', 'MaxDrawdown_%', 'TimeDD_bars', 'VWR', 'SQN', 'WinRate_%',
-            'ProfitFactor', 'AvgTradePL', 'trades_total', 'Sortino'
-          ];
-
-          const rows = [];
-          order.forEach(k => (k in m) && rows.push([k, m[k]]));
-          // ajoute tout le reste (si présent)
-          Object.keys(m).forEach(k => { if (!order.includes(k)) rows.push([k, m[k]]); });
-
-          metricsEl.innerHTML = rows.map(([k, v]) => {
-            const label = k.replaceAll('_', ' ');
-            return `<li><strong>${label}:</strong> ${formatValue(k, v)}</li>`;
-          }).join('');
-
-          // ----- Plot -----
-          if (out?.plot) {
-            const src = ABS(out.plot);                   // gros "pretty" plot
-            plotsEl.innerHTML = `
-      <img id="btPretty" src="${src}" alt="backtest plot"
-           style="width:100%;max-width:1200px;border:1px solid #e5e7eb;border-radius:12px"
-           onload="this.scrollIntoView({behavior:'smooth'})"
-           onerror="this.closest('#btPlotWrap').style.display='none';">
-    `;
-            plotWrap.style.display = '';
-          } else if (Array.isArray(out?.charts) && out.charts.length) {
-            // fallback: petites images KPI
-            plotsEl.innerHTML = out.charts.map(u => `
-      <img src="${ABS(u)}" alt="backtest plot"
-           style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
-    `).join('');
-            plotWrap.style.display = '';
-          }
-
-          resultsWrap.style.display = '';
-          statusEl.textContent = '';
-        }
-
-
-
       } catch (err) {
         console.error(err);
         statusEl.textContent = 'Error running backtest. Please check inputs and try again.';
@@ -214,5 +202,4 @@
     });
   </script>
 </body>
-
 </html>
