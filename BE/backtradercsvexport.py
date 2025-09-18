@@ -325,9 +325,8 @@ def run_one(symbol: str, strat_cls) -> Dict[str, Any]:
     except Exception as e:
         print("[warn] pretty plot failed:", e)
 
-    
 
-    return {
+    ret = {
         "Symbol": symbol,
         "Strategy": strat_cls.__name__,
         "TotalReturn_%": total_ret,
@@ -345,6 +344,10 @@ def run_one(symbol: str, strat_cls) -> Dict[str, Any]:
         "trades_total":trades_total,
         "Sortino": sortino
     }
+
+    creategraph(ret, load_thresholds())
+
+    return ret
 
 
 def creategraph(row: dict, thresholds: dict) -> None:
@@ -438,10 +441,7 @@ def main():
         for strat_cls in STRATEGIES:
             print(f"    ▶ {strat_cls.__name__}")
             row = run_one(symbol, strat_cls)
-            thresholds = load_thresholds()
-
-
-            creategraph(row, thresholds)
+            
             rows.append(row)
 
     df = pd.DataFrame(rows)
@@ -452,3 +452,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+   

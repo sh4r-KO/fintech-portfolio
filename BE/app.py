@@ -495,14 +495,16 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pathlib import Path
 
-# --- before ---
-# CHARTS_DIR = Path("output/charts")
-
-# --- after ---
+# app.py (top-level, near other imports)
+from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-CHARTS_DIR = Path("/tmp/charts")  # Cloud Run: /tmp is writeable
+
+APP_DIR = Path(__file__).parent
+CHARTS_DIR = APP_DIR / "output" / "graphs"
 CHARTS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/plots", StaticFiles(directory=str(CHARTS_DIR)), name="plots")
+
+# serve files like https://.../graphs/Calmar.png
+app.mount("/graphs", StaticFiles(directory=str(CHARTS_DIR)), name="graphs")
 
 
 from pydantic import BaseModel, ConfigDict
@@ -514,13 +516,13 @@ class BacktestRequest(BaseModel):
 
     symbol: str
     strategy: str
+    start_period: str
+    end_period: str
+    starting_capital: str
+    commission: float
+    slippage: float
 
-    # Optional knobs your page sends (use them in your backtester if supported)
-    start_period: Optional[str] = None   # "YYYY-MM-DD"
-    end_period: Optional[str] = None
-    starting_capital: Optional[float] = None
-    commission: Optional[float] = None
-    slippage: Optional[float] = None
+
 
 
 def _resolve_strategy(name: str):
@@ -543,8 +545,7 @@ from fastapi import HTTPException
 @app.post("/api/backtest")
 def api_backtest(req: BacktestRequest):
     print(f"[/api/backtest] symbol={req.symbol} strategy={req.strategy}")
-
-    # Load backtester + strategy safely
+    
     try:
         backtester = importlib.import_module("backtradercsvexport")
     except Exception as e:
@@ -555,12 +556,10 @@ def api_backtest(req: BacktestRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Run the backtest
     try:
         result = backtester.run_one(
             req.symbol,
             StratCls,
-            # If your backtester supports these, pass them through:
             start_period=req.start_period,
             end_period=req.end_period,
             starting_capital=req.starting_capital,
@@ -570,8 +569,17 @@ def api_backtest(req: BacktestRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Backtest failed: {e}")
 
-    pngs = sorted([f"/plots/{p.name}" for p in CHARTS_DIR.glob(f"{req.symbol}_{req.strategy}_*.png")])
-    return {"ok": True, "metrics": result, "plots": pngs}
+    # names produced by your gauge code
+    png_names = [
+        "Calmar.png","MaxDrawdown_%.png","ProfitFactor.png","rnorm100_%.png",
+        "SharpeAnnual.png","SharpeDaily.png","Sortino.png","SQN.png",
+        "TimeDD_bars.png","TotalReturn_%.png","VWR.png","WinRate_%.png"
+    ]
+
+    # Only include the ones that exist
+    charts = [f"/graphs/{name}" for name in png_names if (CHARTS_DIR / name).exists()]
+
+    return {"ok": True, "metrics": result, "charts": charts}
 
 
 from fastapi.responses import JSONResponse

@@ -1,42 +1,101 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Backtest Runner</title>
+  <title>Backtrader — Run & Plot</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
-  <main class="container about">
-    <h2>Backtrader — Strategy Runner</h2>
+  <header class="container header">
+    <a href="/" class="logo">Home</a>
+    <nav>
+      <a href="/#projects">Projects</a>
+      <a href="/#about">About</a>
+      <a href="/#contact">Contact</a>
+    </nav>
+  </header>
 
-    <form id="btForm" class="row two-col">
-      <label>Symbol
-        <input name="symbol" placeholder="AAPL" required />
-      </label>
-      <label>Strategy
-        <select name="strategy" id="strategy" required></select>
-      </label>
-      <button type="submit" style="grid-column:1/-1">Run Backtest</button>
-      <small id="status" class="muted" style="grid-column:1/-1"></small>
-    </form>
+  <main class="container">
+    <section class="about">
+      <h2>Backtrader — Strategy Runner</h2>
+      <form id="btForm">
+        <div class="row two-col">
+          <label>Symbol
+            <input name="symbol" id="btSymbol" placeholder="AAPL" required value="AAPL" />
+          </label>
+          <label>Strategy
+            <select name="strategy" id="btStrategy" required></select>
+          </label>
+        </div>
 
-    <div id="out" class="article" style="display:none">
-      <h3>KPIs</h3>
-      <ul id="metrics" class="metrics"></ul>
-      <div id="plots" class="grid" style="gap:12px"></div>
-    </div>
+        <div class="row two-col">
+          <label>Start date
+            <input name="start_period" id="btStart" type="date" value="01/10/2005" />
+          </label>
+          <label>End date
+            <input name="end_period" id="btEnd" type="date" value="01/10/2020" />
+          </label>
+        </div>
+
+        <div class="row two-col">
+          <label>Starting capital
+            <input name="starting_capital" id="btCash" type="number" step="any" value="10000" />
+          </label>
+          <label>Commission (fraction)
+            <input name="commission" id="btComm" type="number" step="any" value="0.001" />
+          </label>
+        </div>
+
+        <div class="row">
+          <label>Slippage (fraction)
+            <input name="slippage" id="btSlip" type="number" step="any" value="0.0" />
+          </label>
+        </div>
+
+        <button type="submit">Run Backtest</button>
+        <small id="btStatus" class="muted"></small>
+      </form>
+
+      <div id="btResults" class="article" style="display:none">
+        <h3>KPIs</h3>
+        <ul class="metrics" id="btMetrics"></ul>
+
+        <div id="btPlotWrap" style="margin-top:10px; display:none">
+          <h3>Plot(s)</h3>
+          <div id="btPlots" class="grid" style="gap:12px"></div>
+        </div>
+
+        <div id="btKpiPngWrap" style="margin-top:10px; display:none">
+          <h3>KPI Images</h3>
+          <div id="btKpiPngs" class="grid" style="gap:12px"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script>
-    const API = "https://fintech-portfolio-546985714630.europe-west1.run.app";
+  <footer class="container footer"><small>© <span id="y"></span> [Aguirre Cabrol]</small></footer>
 
-    // 1) Load strategies
+  <script>
+    window.API_BASE = "https://fintech-portfolio-546985714630.europe-west1.run.app";
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    const sel = document.getElementById('btStrategy');
+    const statusEl = document.getElementById('btStatus');
+    const resultsWrap = document.getElementById('btResults');
+    const metricsEl = document.getElementById('btMetrics');
+    const plotWrap = document.getElementById('btPlotWrap');
+    const plotsEl = document.getElementById('btPlots');
+    const kpiWrap = document.getElementById('btKpiPngWrap');
+    const kpiEl = document.getElementById('btKpiPngs');
+
+    // Populate strategies from backend
     (async () => {
-      const sel = document.getElementById('strategy');
       try {
-        const r = await fetch(`${API}/api/strategies`);
-        const data = await r.json(); // backend returns { items: [...] }
+        const res = await fetch(`${window.API_BASE}/api/strategies`);
+        const data = res.ok ? await res.json() : { items: ["SmaCross", "Rsi2", "EmaCross"] };
         const items = data.items || data;
         sel.innerHTML = items.map(s => `<option value="${s}">${s}</option>`).join('');
       } catch {
@@ -44,7 +103,88 @@
       }
     })();
 
-    
+    // Form submit → run backtest
+    document.getElementById('btForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      statusEl.textContent = 'Running…';
+      resultsWrap.style.display = 'none';
+      plotWrap.style.display = 'none';
+      kpiWrap.style.display = 'none';
+      plotsEl.innerHTML = '';
+      kpiEl.innerHTML = '';
+
+      const fd = new FormData(e.currentTarget);
+      const payload = {
+        symbol: fd.get('symbol')?.trim(),
+        strategy: fd.get('strategy'),
+        start_period: fd.get('start_period'),
+        end_period: fd.get('end_period'),
+        starting_capital: Number(fd.get('starting_capital') || 10000),
+        commission: Number(fd.get('commission') || 0),
+        slippage: Number(fd.get('slippage') || 0)
+      };
+
+      try {
+        const res = await fetch(`${window.API_BASE}/api/backtest`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('backtest failed');
+        const out = await res.json();
+
+        // KPIs
+        const m = out.metrics || {};
+        const fmt = (x, d = 4) =>
+          (x === null || x === undefined || Number.isNaN(x)) ? '—' :
+            Number(x).toLocaleString(undefined, { maximumFractionDigits: d });
+        metricsEl.innerHTML = Object.entries(m).map(([k, v]) => {
+          const label = k.replaceAll('_', ' ');
+          return `<li><strong>${label}:</strong> ${fmt(v)}</li>`;
+        }).join('');
+
+        // Main plot(s)
+        const plots = Array.isArray(out.charts) ? out.charts : (out.plot ? [out.plot] : []);
+        if (plots.length) {
+          plotsEl.innerHTML = plots.map(url => `
+            <img src="${url}" alt="backtest plot"
+              style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
+          `).join('');
+          plotWrap.style.display = '';
+        }
+
+        const charts = Array.isArray(out.charts) ? out.charts : (out.plot ? [out.plot] : []);
+        if (charts.length) {
+          plotsEl.innerHTML = charts.map(url => `
+            <img src="${url}" alt="backtest plot"
+                style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
+          `).join('');
+          plotWrap.style.display = '';
+        }
+
+        // KPI PNGs
+        if (out.kpi && typeof out.kpi === 'object') {
+          const entries = Object.entries(out.kpi);
+          if (entries.length) {
+            kpiEl.innerHTML = entries.map(([name, url]) => `
+              <figure style="margin:0">
+                <img src="${url}" alt="${name}"
+                  style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
+                <figcaption class="muted" style="text-align:center;margin-top:4px">${name}</figcaption>
+              </figure>
+            `).join('');
+            kpiWrap.style.display = '';
+          }
+        }
+
+        resultsWrap.style.display = '';
+        statusEl.textContent = '';
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'Error running backtest. Please check inputs and try again.';
+      }
+    });
   </script>
 </body>
+
 </html>
