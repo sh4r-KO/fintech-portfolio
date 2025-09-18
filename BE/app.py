@@ -363,6 +363,7 @@ import os, io, json, math
 from datetime import date, timedelta, datetime
 import httpx
 import matplotlib.pyplot as plt
+
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -557,3 +558,6 @@ def api_backtest(req: BacktestRequest):
         "plots": pngs        # list of URLs the FE can <img src=...>
     }
 # ========= /Backtrader integration =========
+
+for r in app.routes:
+    print(r.path, getattr(r, "methods", None))
