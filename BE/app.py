@@ -519,6 +519,8 @@ def api_strategies():
 
 @app.post("/api/backtest")
 def api_backtest(req: BacktestRequest):
+    print(f"[/api/backtest] {req.symbol=} {req.strategy=}")
+
     import importlib
     backtester = importlib.import_module("backtradercsvexport")
     StratCls = _resolve_strategy(req.strategy)
