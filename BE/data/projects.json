@@ -41,8 +41,8 @@
     {
         "id": "backTradeTest",
         "slug": "backTradeTest",
-        "title": "tbd",
-        "summary": "to be determined",
+        "title": "back trade tester",
+        "summary": "A back trade tester web app, with historical data and charts.",
         "cover_image": "images/work_in_progress.png",
         "tags": [
             "none"
