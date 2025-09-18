@@ -528,3 +528,4 @@ def api_backtest(req: BacktestRequest):
         raise HTTPException(status_code=500, detail=f"Backtest failed: {e}")
     pngs = sorted([f"/plots/{p.name}" for p in CHARTS_DIR.glob(f"{req.symbol}_{req.strategy}_*.png")])
     return {"ok": True, "metrics": result, "plots": pngs}
+#
