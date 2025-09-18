@@ -275,7 +275,7 @@ def run_one(symbol: str, strat_cls) -> Dict[str, Any]:
         win_rate = profit_factor = avg_trade_pl = float("nan")
 
     # save png plot chart(s)
-    outdir = Path("output/plots")
+    outdir = Path("backtrade/output/plots")
     outdir.mkdir(exist_ok=True)
 
     
@@ -312,7 +312,7 @@ def run_one(symbol: str, strat_cls) -> Dict[str, Any]:
         if sell_ser is not None:
             aps.append(mpf.make_addplot(sell_ser, type='scatter', marker='v', markersize=80))
 
-        pretty_dir = Path("output/pretty"); pretty_dir.mkdir(parents=True, exist_ok=True)
+        pretty_dir = Path("backtrade/output/pretty"); pretty_dir.mkdir(parents=True, exist_ok=True)
         pretty_png = pretty_dir / f"{symbol}_{strat_cls.__name__}.png"
 
         mpf.plot(
@@ -447,7 +447,7 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
         win_rate = profit_factor = avg_trade_pl = float("nan")
 
     # save png plot chart(s)
-    outdir = Path("output/plots")
+    outdir = Path("backtrade/output/plots")
     outdir.mkdir(exist_ok=True)
 
     
@@ -484,7 +484,7 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
         if sell_ser is not None:
             aps.append(mpf.make_addplot(sell_ser, type='scatter', marker='v', markersize=80))
 
-        pretty_dir = Path("output/pretty"); pretty_dir.mkdir(parents=True, exist_ok=True)
+        pretty_dir = Path("backtrade/output/pretty"); pretty_dir.mkdir(parents=True, exist_ok=True)
         pretty_png = pretty_dir / f"{symbol}_{strat_cls.__name__}.png"
 
         mpf.plot(
