@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Backtrader — Run & Plot</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <header class="container header">
     <a href="/" class="logo">Home</a>
@@ -76,8 +78,7 @@
 
   <footer class="container footer"><small>© <span id="y"></span> [Aguirre Cabrol]</small></footer>
 
-  <!-- set this to your API base (or leave empty string if same origin/proxy) -->
-  <script>window.API_BASE = ""; /* e.g. "https://your-api-domain" */</script>
+  <script>window.API_BASE = "https://fintech-portfolio-546985714630.europe-west1.run.app";</script>
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
 
@@ -135,8 +136,8 @@
 
         // KPIs (metrics dict)
         const m = out.metrics || {};
-        const fmt = (x, d=4) => (x === null || x === undefined || Number.isNaN(x)) ? '—' :
-                                Number(x).toLocaleString(undefined, { maximumFractionDigits: d });
+        const fmt = (x, d = 4) => (x === null || x === undefined || Number.isNaN(x)) ? '—' :
+          Number(x).toLocaleString(undefined, { maximumFractionDigits: d });
         metricsEl.innerHTML = Object.entries(m).map(([k, v]) => {
           // nicer labels
           const label = k.replaceAll('_', ' ');
@@ -175,4 +176,5 @@
     });
   </script>
 </body>
+
 </html>
