@@ -530,7 +530,7 @@ def _resolve_strategy(name: str):
     strats_mod = importlib.import_module("strats")
     lut = {cls.__name__: cls for cls in strats_mod.retall()}
     if name not in lut:
-        raise HTTPException(status_code=400, detail=f"Unknown strategy: {name}")
+        raise HTTPException(status_code=400, detail=f"Unknown strategy name: {name}")
     return lut[name]
 
 @app.get("/api/strategies")
@@ -551,7 +551,7 @@ def api_backtest(req: BacktestRequest):
     try:
         StratCls = _resolve_strategy(req.strategy)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=f"_resolve_strategy(req.strategy) failed: {e}")
 
     try:
         result = backtester.run_one(
