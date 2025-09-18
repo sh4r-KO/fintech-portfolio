@@ -115,14 +115,18 @@
 
       const fd = new FormData(e.currentTarget);
       const payload = {
-        symbol: fd.get('symbol')?.trim(),
-        strategy: fd.get('strategy'),
-        start_period: fd.get('start_period'),
-        end_period: fd.get('end_period'),
-        starting_capital: Number(fd.get('starting_capital') || 10000),
-        commission: Number(fd.get('commission') || 0),
-        slippage: Number(fd.get('slippage') || 0)
+        symbol: fd.get('symbol')?.trim() || undefined,
+        // name must match the backend: "strategy" (or "strat")
+        strategy: fd.get('strategy') || fd.get('strat') || undefined,
+        start_period: fd.get('start_period') || undefined,
+        end_period: fd.get('end_period') || undefined,
+        starting_capital: fd.get('starting_capital') ? Number(fd.get('starting_capital')) : undefined,
+        commission: fd.get('commission') ? Number(fd.get('commission')) : undefined,
+        slippage: fd.get('slippage') ? Number(fd.get('slippage')) : undefined,
       };
+      // strip undefineds
+      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+
 
       try {
         const res = await fetch(`${window.API_BASE}/api/backtest`, {
