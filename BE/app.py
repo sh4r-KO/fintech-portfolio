@@ -518,7 +518,7 @@ class BacktestRequest(BaseModel):
     strategy: str
     start_period: str
     end_period: str
-    starting_capital: str
+    starting_capital: float
     commission: float
     slippage: float
 
