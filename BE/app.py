@@ -527,6 +527,7 @@ class BacktestRequest(BaseModel):
 
 @app.get("/api/strategies")
 def api_strategies():
+    return {"ok": True}
     """List strategy names so the FE can populate a dropdown."""
     return {"items": [cls.__name__ for cls in strats_mod.retall()]}
 
