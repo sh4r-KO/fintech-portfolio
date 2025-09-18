@@ -532,6 +532,7 @@ def api_strategies():
 
 @app.post("/api/backtest")
 def api_backtest(req: BacktestRequest):
+    return {"ok": True}
     """
     Run a single backtest and return:
       - KPIs (whatever run_one returns)
@@ -557,7 +558,3 @@ def api_backtest(req: BacktestRequest):
         "metrics": result,   # dict with Sharpe, DD, etc. from run_one
         "plots": pngs        # list of URLs the FE can <img src=...>
     }
-# ========= /Backtrader integration =========
-
-for r in app.routes:
-    print(r.path, getattr(r, "methods", None))

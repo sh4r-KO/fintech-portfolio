@@ -79,7 +79,7 @@
   <footer class="container footer"><small>© <span id="y"></span> [Aguirre Cabrol]</small></footer>
 
   <script></script>
-  <script>
+  <script>             
     window.API_BASE = "https://fintech-portfolio-546985714630.europe-west1.run.app";
     document.getElementById('y').textContent = new Date().getFullYear();
 
@@ -127,10 +127,11 @@
       };
 
       try {
+        
         const res = await fetch(`${window.API_BASE}/api/backtest`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+           headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
         });
         if (!res.ok) throw new Error('backtest failed');
         const out = await res.json();
