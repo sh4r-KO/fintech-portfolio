@@ -48,7 +48,7 @@ import mplfinance as mpf
 
 # ─────────────────────────── CONFIGURATION ────────────────────────────
 
-CONFIG_FILE = "config.yaml"
+CONFIG_FILE = "backtrade/config.yaml"
 
 SYMBOLS = ["SPY", "QQQ", "MTUM","EEM","TLT","GLD","IEF","MSFT", "AAPL", "NVDA","META"]
 SYMBOLS = load_symbols(CONFIG_FILE)
@@ -625,8 +625,8 @@ def main():
     print("\nSaved results to", CSV_PATH)
     print(df.head())
 
-if __name__ == "__main__":
-    main()
+#if __name__ == "__main__":
+#    main()
 
 
    
