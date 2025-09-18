@@ -1,101 +1,42 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Backtrader — Run & Plot</title>
+  <title>Backtest Runner</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
-  <header class="container header">
-    <a href="/" class="logo">Home</a>
-    <nav>
-      <a href="/#projects">Projects</a>
-      <a href="/#about">About</a>
-      <a href="/#contact">Contact</a>
-    </nav>
-  </header>
+  <main class="container about">
+    <h2>Backtrader — Strategy Runner</h2>
 
-  <main class="container">
-    <section class="about">
-      <h2>Backtrader — Strategy Runner</h2>
-      <form id="btForm">
-        <div class="row two-col">
-          <label>Symbol
-            <input name="symbol" id="btSymbol" placeholder="AAPL" required />
-          </label>
-          <label>Strategy
-            <select name="strategy" id="btStrategy" required></select>
-          </label>
-        </div>
+    <form id="btForm" class="row two-col">
+      <label>Symbol
+        <input name="symbol" placeholder="AAPL" required />
+      </label>
+      <label>Strategy
+        <select name="strategy" id="strategy" required></select>
+      </label>
+      <button type="submit" style="grid-column:1/-1">Run Backtest</button>
+      <small id="status" class="muted" style="grid-column:1/-1"></small>
+    </form>
 
-        <div class="row two-col">
-          <label>Start date
-            <input name="start_period" id="btStart" type="date" />
-          </label>
-          <label>End date
-            <input name="end_period" id="btEnd" type="date" />
-          </label>
-        </div>
-
-        <div class="row two-col">
-          <label>Starting capital
-            <input name="starting_capital" id="btCash" type="number" step="any" value="10000" />
-          </label>
-          <label>Commission (fraction)
-            <input name="commission" id="btComm" type="number" step="any" value="0.001" />
-          </label>
-        </div>
-
-        <div class="row">
-          <label>Slippage (fraction)
-            <input name="slippage" id="btSlip" type="number" step="any" value="0.0" />
-          </label>
-        </div>
-
-        <button type="submit">Run Backtest</button>
-        <small id="btStatus" class="muted"></small>
-      </form>
-
-      <div id="btResults" class="article" style="display:none">
-        <h3>KPIs</h3>
-        <ul class="metrics" id="btMetrics"></ul>
-
-        <div id="btPlotWrap" style="margin-top:10px; display:none">
-          <h3>Plot(s)</h3>
-          <div id="btPlots" class="grid" style="gap:12px"></div>
-        </div>
-
-        <div id="btKpiPngWrap" style="margin-top:10px; display:none">
-          <h3>KPI Images</h3>
-          <div id="btKpiPngs" class="grid" style="gap:12px"></div>
-        </div>
-      </div>
-    </section>
+    <div id="out" class="article" style="display:none">
+      <h3>KPIs</h3>
+      <ul id="metrics" class="metrics"></ul>
+      <div id="plots" class="grid" style="gap:12px"></div>
+    </div>
   </main>
 
-  <footer class="container footer"><small>© <span id="y"></span> [Aguirre Cabrol]</small></footer>
-
   <script>
-    window.API_BASE = "https://fintech-portfolio-546985714630.europe-west1.run.app";
-    document.getElementById('y').textContent = new Date().getFullYear();
+    const API = "https://fintech-portfolio-546985714630.europe-west1.run.app";
 
-    const sel = document.getElementById('btStrategy');
-    const statusEl = document.getElementById('btStatus');
-    const resultsWrap = document.getElementById('btResults');
-    const metricsEl = document.getElementById('btMetrics');
-    const plotWrap = document.getElementById('btPlotWrap');
-    const plotsEl = document.getElementById('btPlots');
-    const kpiWrap = document.getElementById('btKpiPngWrap');
-    const kpiEl = document.getElementById('btKpiPngs');
-
-    // Populate strategies from backend
+    // 1) Load strategies
     (async () => {
+      const sel = document.getElementById('strategy');
       try {
-        const res = await fetch(`${window.API_BASE}/api/strategies`);
-        const data = res.ok ? await res.json() : { items: ["SmaCross", "Rsi2", "EmaCross"] };
+        const r = await fetch(`${API}/api/strategies`);
+        const data = await r.json(); // backend returns { items: [...] }
         const items = data.items || data;
         sel.innerHTML = items.map(s => `<option value="${s}">${s}</option>`).join('');
       } catch {
@@ -103,79 +44,55 @@
       }
     })();
 
-    // Form submit → run backtest
+    // 2) Submit backtest — payload: { symbol, strategy } per OpenAPI
     document.getElementById('btForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      statusEl.textContent = 'Running…';
-      resultsWrap.style.display = 'none';
-      plotWrap.style.display = 'none';
-      kpiWrap.style.display = 'none';
-      plotsEl.innerHTML = '';
-      kpiEl.innerHTML = '';
+      const status = document.getElementById('status');
+      const out = document.getElementById('out');
+      const metrics = document.getElementById('metrics');
+      const plots = document.getElementById('plots');
+      status.textContent = "Running…";
+      out.style.display = "none";
+      metrics.innerHTML = ""; plots.innerHTML = "";
 
       const fd = new FormData(e.currentTarget);
       const payload = {
-        symbol: fd.get('symbol')?.trim(),
-        strategy: fd.get('strategy'),
-        start_period: fd.get('start_period') || null,
-        end_period: fd.get('end_period') || null,
-        starting_capital: Number(fd.get('starting_capital') || 10000),
-        commission: Number(fd.get('commission') || 0),
-        slippage: Number(fd.get('slippage') || 0)
+        symbol: fd.get('symbol').trim(),
+        strategy: fd.get('strategy')
       };
 
       try {
-        const res = await fetch(`${window.API_BASE}/api/backtest`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch(`${API}/api/backtest`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error('backtest failed');
-        const out = await res.json();
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
 
         // KPIs
-        const m = out.metrics || {};
-        const fmt = (x, d = 4) =>
-          (x === null || x === undefined || Number.isNaN(x)) ? '—' :
-          Number(x).toLocaleString(undefined, { maximumFractionDigits: d });
-        metricsEl.innerHTML = Object.entries(m).map(([k, v]) => {
-          const label = k.replaceAll('_', ' ');
-          return `<li><strong>${label}:</strong> ${fmt(v)}</li>`;
-        }).join('');
+        const m = json.metrics || {};
+        const fmt = v => (v==null || Number.isNaN(v)) ? "—"
+                         : Number(v).toLocaleString(undefined, { maximumFractionDigits: 4 });
+        metrics.innerHTML = Object.entries(m)
+          .map(([k,v]) => `<li><strong>${k.replaceAll('_',' ')}:</strong> ${fmt(v)}</li>`).join('');
 
-        // Main plot(s)
-        const plots = Array.isArray(out.plots) ? out.plots : (out.plot ? [out.plot] : []);
-        if (plots.length) {
-          plotsEl.innerHTML = plots.map(url => `
-            <img src="${url}" alt="backtest plot"
-              style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
-          `).join('');
-          plotWrap.style.display = '';
-        }
+        // Plots
+        (json.plots || []).forEach(src => {
+          const img = document.createElement('img');
+          img.src = src;
+          img.alt = "Backtest plot";
+          img.style = "max-width:100%;border:1px solid #e5e7eb;border-radius:12px";
+          plots.appendChild(img);
+        });
 
-        // KPI PNGs
-        if (out.kpi && typeof out.kpi === 'object') {
-          const entries = Object.entries(out.kpi);
-          if (entries.length) {
-            kpiEl.innerHTML = entries.map(([name, url]) => `
-              <figure style="margin:0">
-                <img src="${url}" alt="${name}"
-                  style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
-                <figcaption class="muted" style="text-align:center;margin-top:4px">${name}</figcaption>
-              </figure>
-            `).join('');
-            kpiWrap.style.display = '';
-          }
-        }
-
-        resultsWrap.style.display = '';
-        statusEl.textContent = '';
+        out.style.display = "";
+        status.textContent = "";
       } catch (err) {
         console.error(err);
-        statusEl.textContent = 'Error running backtest. Please check inputs and try again.';
+        status.textContent = "Backtest failed. Check symbol/strategy and server logs.";
       }
     });
   </script>
 </body>
-
 </html>
