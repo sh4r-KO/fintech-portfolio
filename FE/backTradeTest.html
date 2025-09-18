@@ -129,6 +129,7 @@
 
 
       try {
+        console.log('payload', payload)
         const res = await fetch(`${window.API_BASE}/api/backtest`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
