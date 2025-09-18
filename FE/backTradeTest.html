@@ -150,14 +150,21 @@
 
 
 
-        const charts = Array.isArray(out.charts) ? out.charts : (out.plot ? [out.plot] : []);
-        if (charts.length) {
-          plotsEl.innerHTML = charts.map(url => `
-            <img src="${url}" alt="backtest plot"
-                style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
-          `).join('');
+        // helper
+        const toAbs = (u) => /^https?:\/\//i.test(u)
+          ? u
+          : (window.API_BASE.replace(/\/$/, '') + u);
+
+        // render
+        const plots = Array.isArray(out.charts) ? out.charts : (out.plot ? [out.plot] : []);
+        if (plots.length) {
+          plotsEl.innerHTML = plots.map(u => `
+              <img src="${toAbs(u)}" alt="backtest plot"
+                  style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
+              `).join('');
           plotWrap.style.display = '';
         }
+
 
 
 
