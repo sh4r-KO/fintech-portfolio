@@ -165,19 +165,26 @@
               `).join('');
           plotWrap.style.display = '';
         }
-        // ---- Single pretty plot (ignore charts array) ----
+
+
+
+        
+        // Single big plot from `out.plot`
         const abs = (u) => /^https?:\/\//i.test(u) ? u : (window.API_BASE.replace(/\/$/, '') + u);
+
         if (out.plot) {
-          const url = abs(out.plot) + `?v=${Date.now()}`; // cache-bust
+          const src = abs(out.plot) + `?v=${Date.now()}`; // cache-bust
           plotsEl.innerHTML = `
-              <img id="btPretty" src="${url}" alt="backtest plot"
-                  style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px"
-                  onerror="this.closest('#btPlotWrap').style.display='none';">
+            <img id="btPretty" src="${src}" alt="strategy plot"
+                style="width:100%;max-width:1200px;border:1px solid #e5e7eb;border-radius:12px" 
+                onload="this.scrollIntoView({behavior:'smooth'})"
+                onerror="this.closest('#btPlotWrap').style.display='none';">
             `;
           plotWrap.style.display = '';
         } else {
           plotWrap.style.display = 'none';
         }
+
 
 
 
