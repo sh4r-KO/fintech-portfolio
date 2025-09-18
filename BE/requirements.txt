@@ -12,3 +12,4 @@ pandas-datareader==0.10.0
 PyYAML==6.0.2
 yahooquery==2.3.7
 requests==2.32.3
+mplfinance==0.12.10b0
