@@ -173,7 +173,7 @@
         const abs = (u) => /^https?:\/\//i.test(u) ? u : (window.API_BASE.replace(/\/$/, '') + u);
 
         if (out.plot) {
-          const src = abs(out.plot) + `?v=${Date.now()}`; // cache-bust
+          const src = abs(out.plot); // cache-bust
           plotsEl.innerHTML = `
             <img id="btPretty" src="${src}" alt="strategy plot"
                 style="width:100%;max-width:1200px;border:1px solid #e5e7eb;border-radius:12px" 
