@@ -563,6 +563,7 @@ def api_backtest(req: BacktestRequest):
         raise HTTPException(status_code=400, detail=f"_resolve_strategy(req.strategy) failed: {e}")
 
     try:
+        _clear_graphs_dir()
         result = backtester.run_one(
             req.symbol,
             StratCls,
@@ -599,3 +600,12 @@ async def unhandled_exceptions(_: Request, exc: Exception):
 @app.get("/api/ping")
 def ping():
     return {"ok": True}
+
+def _clear_graphs_dir():
+    GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
+    for pat in ("*.png", "*.jpg", "*.jpeg", "*.svg"):
+        for p in GRAPHS_DIR.glob(pat):
+            try:
+                p.unlink()  # Python 3.11 supports missing_ok=True if you prefer
+            except Exception as e:
+                print(f"[warn] failed to delete {p}: {e}")
