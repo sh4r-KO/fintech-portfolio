@@ -518,7 +518,7 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
         "Sortino": sortino
     }
 
-    creategraph(ret, load_thresholds())
+    creategraph(ret, load_thresholds("backtrade\DataManagement\data\PowerBi\Indicator_Target_Thresholds.csv"))
 
     return ret
 
@@ -526,7 +526,7 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
 
 
 def creategraph(row: dict, thresholds: dict) -> None:
-    outdir = Path("output/graphs")
+    outdir = Path("backtrade/output/graphs")
     outdir.mkdir(exist_ok=True)
 
     symbol = row.get("Symbol")
