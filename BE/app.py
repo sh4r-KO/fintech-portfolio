@@ -5,6 +5,11 @@ from typing import List, Optional
 from pathlib import Path
 import json
 
+from fastapi import HTTPException
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from pathlib import Path
+import importlib
 import io
 import matplotlib.pyplot as plt
 from fastapi.responses import StreamingResponse
@@ -492,18 +497,13 @@ async def stocks_plot(payload: StockInput):
 # Uses your existing backtradercsvexport.run_one(symbol, strat_cls)
 # and your strategies defined in strats.py.
 
-from fastapi import HTTPException
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-from pathlib import Path
-import importlib
 
 # Where your plots are saved by run_one()
 CHARTS_DIR = Path("output/charts")
 CHARTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Serve the generated PNGs (e.g. /plots/AAPL_SmaCross_0_0.png)
-app.mount("/plots", StaticFiles(directory=str(CHARTS_DIR)), name="plots")
+#app.mount("/plots", StaticFiles(directory=str(CHARTS_DIR)), name="plots")
 
 # Import your code
 try:
@@ -533,7 +533,7 @@ def api_strategies():
 
 @app.post("/api/backtest")
 def api_backtest(req: BacktestRequest):
-    return {"ok": True}
+    
     """
     Run a single backtest and return:
       - KPIs (whatever run_one returns)
