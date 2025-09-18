@@ -484,3 +484,76 @@ async def stocks_plot(payload: StockInput):
     plt.savefig(buf, format="png")
     plt.close(fig); buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
+
+
+# _________________________________________________________
+# ========= Backtrader integration =========
+# Uses your existing backtradercsvexport.run_one(symbol, strat_cls)
+# and your strategies defined in strats.py.
+
+from fastapi import HTTPException
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from pathlib import Path
+import importlib
+
+# Where your plots are saved by run_one()
+CHARTS_DIR = Path("output/charts")
+CHARTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Serve the generated PNGs (e.g. /plots/AAPL_SmaCross_0_0.png)
+app.mount("/plots", StaticFiles(directory=str(CHARTS_DIR)), name="plots")
+
+# Import your code
+try:
+    backtester = importlib.import_module("backtradercsvexport")
+    strats_mod = importlib.import_module("strats")
+except Exception as e:
+    # If this triggers, make sure backtradercsvexport.py & strats.py are in the container/working dir
+    raise
+
+def _resolve_strategy(name: str):
+    """Map 'SmaCross' -> class SmaCross in strats.py."""
+    # strats.retall() returns all Strategy subclasses you defined
+    lut = {cls.__name__: cls for cls in strats_mod.retall()}
+    if name not in lut:
+        raise HTTPException(status_code=400, detail=f"Unknown strategy: {name}")
+    return lut[name]
+
+class BacktestRequest(BaseModel):
+    symbol: str
+    strategy: str
+
+@app.get("/api/strategies")
+def api_strategies():
+    """List strategy names so the FE can populate a dropdown."""
+    return {"items": [cls.__name__ for cls in strats_mod.retall()]}
+
+@app.post("/api/backtest")
+def api_backtest(req: BacktestRequest):
+    """
+    Run a single backtest and return:
+      - KPIs (whatever run_one returns)
+      - list of plot PNG URLs saved by Backtrader under output/charts/
+    """
+    try:
+        StratCls = _resolve_strategy(req.strategy)
+        result = backtester.run_one(req.symbol, StratCls)   # <-- your function
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Bubble a clean error to the FE
+        raise HTTPException(status_code=500, detail=f"Backtest failed: {e}")
+
+    # Gather all PNGs your run saved for this symbol/strategy
+    pngs = sorted([
+        f"/plots/{p.name}"
+        for p in CHARTS_DIR.glob(f"{req.symbol}_{req.strategy}_*.png")
+    ])
+
+    return {
+        "ok": True,
+        "metrics": result,   # dict with Sharpe, DD, etc. from run_one
+        "plots": pngs        # list of URLs the FE can <img src=...>
+    }
+# ========= /Backtrader integration =========
