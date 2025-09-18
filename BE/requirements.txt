@@ -4,8 +4,6 @@ pydantic[email]==2.9.1
 python-multipart==0.0.9
 httpx==0.27.2
 matplotlib==3.9.2
-
-# Backtrader & data stack
 backtrader==1.9.78.123
 pandas==2.2.2
 numpy==1.26.4
