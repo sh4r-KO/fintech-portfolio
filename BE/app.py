@@ -548,7 +548,6 @@ def api_backtest(req: BacktestRequest):
         backtester = importlib.import_module("backtradercsvexport")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Import backtester failed: {e}")
-
     try:
         StratCls = _resolve_strategy(req.strategy)
     except Exception as e:
@@ -558,14 +557,14 @@ def api_backtest(req: BacktestRequest):
         result = backtester.run_one(
             req.symbol,
             StratCls,
-            start_period=req.start_period,
-            end_period=req.end_period,
+            start_date=req.start_period,
+            end_date=req.end_period,
             starting_capital=req.starting_capital,
             commission=req.commission,
             slippage=req.slippage,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Backtest failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Backtest failed: {e}. cant run_one")
 
     # names produced by your gauge code
     png_names = [
