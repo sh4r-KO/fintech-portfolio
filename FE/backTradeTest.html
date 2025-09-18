@@ -33,10 +33,10 @@
 
         <div class="row two-col">
           <label>Start date
-            <input name="start_period" id="btStart" type="date" value="01/10/2005" />
+            <input name="start_period" id="btStart" type="date" value="2005-01-01" />
           </label>
           <label>End date
-            <input name="end_period" id="btEnd" type="date" value="01/10/2020" />
+            <input name="end_period" id="btEnd" type="date" value="2020-01-01" />
           </label>
         </div>
 
@@ -143,15 +143,7 @@
           return `<li><strong>${label}:</strong> ${fmt(v)}</li>`;
         }).join('');
 
-        // Main plot(s)
-        const plots = Array.isArray(out.charts) ? out.charts : (out.plot ? [out.plot] : []);
-        if (plots.length) {
-          plotsEl.innerHTML = plots.map(url => `
-            <img src="${url}" alt="backtest plot"
-              style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
-          `).join('');
-          plotWrap.style.display = '';
-        }
+
 
         const charts = Array.isArray(out.charts) ? out.charts : (out.plot ? [out.plot] : []);
         if (charts.length) {
@@ -162,20 +154,7 @@
           plotWrap.style.display = '';
         }
 
-        // KPI PNGs
-        if (out.kpi && typeof out.kpi === 'object') {
-          const entries = Object.entries(out.kpi);
-          if (entries.length) {
-            kpiEl.innerHTML = entries.map(([name, url]) => `
-              <figure style="margin:0">
-                <img src="${url}" alt="${name}"
-                  style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
-                <figcaption class="muted" style="text-align:center;margin-top:4px">${name}</figcaption>
-              </figure>
-            `).join('');
-            kpiWrap.style.display = '';
-          }
-        }
+
 
         resultsWrap.style.display = '';
         statusEl.textContent = '';
