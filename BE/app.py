@@ -572,3 +572,16 @@ def api_backtest(req: BacktestRequest):
 
     pngs = sorted([f"/plots/{p.name}" for p in CHARTS_DIR.glob(f"{req.symbol}_{req.strategy}_*.png")])
     return {"ok": True, "metrics": result, "plots": pngs}
+
+
+from fastapi.responses import JSONResponse
+from starlette.requests import Request
+
+@app.exception_handler(Exception)
+async def unhandled_exceptions(_: Request, exc: Exception):
+    # surface the real error instead of a blank 500
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+@app.get("/api/ping")
+def ping():
+    return {"ok": True}
