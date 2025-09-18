@@ -495,9 +495,15 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pathlib import Path
 
-CHARTS_DIR = Path("output/charts")
+# --- before ---
+# CHARTS_DIR = Path("output/charts")
+
+# --- after ---
+from pathlib import Path
+CHARTS_DIR = Path("/tmp/charts")  # Cloud Run: /tmp is writeable
 CHARTS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/plots", StaticFiles(directory=str(CHARTS_DIR)), name="plots")
+
 
 from pydantic import BaseModel, ConfigDict
 from typing import Optional
@@ -529,7 +535,8 @@ def _resolve_strategy(name: str):
 def api_strategies():
     import importlib
     strats_mod = importlib.import_module("strats")
-    return {"items": [cls.__name__ for cls in strats_mod.retall()]}
+    #return {"items": [cls.__name__ for cls in strats_mod.retall()]}
+    return {"items": ["SMA20Cross", "RSI", "MACD"]}  # hardcoded for now
 
 from fastapi import HTTPException
 
