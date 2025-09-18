@@ -44,55 +44,7 @@
       }
     })();
 
-    // 2) Submit backtest — payload: { symbol, strategy } per OpenAPI
-    document.getElementById('btForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const status = document.getElementById('status');
-      const out = document.getElementById('out');
-      const metrics = document.getElementById('metrics');
-      const plots = document.getElementById('plots');
-      status.textContent = "Running…";
-      out.style.display = "none";
-      metrics.innerHTML = ""; plots.innerHTML = "";
-
-      const fd = new FormData(e.currentTarget);
-      const payload = {
-        symbol: fd.get('symbol').trim(),
-        strategy: fd.get('strategy')
-      };
-
-      try {
-        const res = await fetch(`${API}/api/backtest`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-
-        // KPIs
-        const m = json.metrics || {};
-        const fmt = v => (v==null || Number.isNaN(v)) ? "—"
-                         : Number(v).toLocaleString(undefined, { maximumFractionDigits: 4 });
-        metrics.innerHTML = Object.entries(m)
-          .map(([k,v]) => `<li><strong>${k.replaceAll('_',' ')}:</strong> ${fmt(v)}</li>`).join('');
-
-        // Plots
-        (json.plots || []).forEach(src => {
-          const img = document.createElement('img');
-          img.src = src;
-          img.alt = "Backtest plot";
-          img.style = "max-width:100%;border:1px solid #e5e7eb;border-radius:12px";
-          plots.appendChild(img);
-        });
-
-        out.style.display = "";
-        status.textContent = "";
-      } catch (err) {
-        console.error(err);
-        status.textContent = "Backtest failed. Check symbol/strategy and server logs.";
-      }
-    });
+    
   </script>
 </body>
 </html>
