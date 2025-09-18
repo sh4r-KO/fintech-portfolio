@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Compound Interest — Fintech & PySpark Portfolio</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <header class="container header">
+        <a href="/" class="logo">Home</a>
+        <nav>
+            <a href="/#projects">Projects</a>
+            <a href="/#about">About</a>
+            <a href="/#contact">Contact</a>
+        </nav>
+    </header>
+
+    <main class="container" id="compoundApp">
+        <section class="about">
+            <h2>Compound Interest Calculator</h2>
+            <form id="ciForm">
+                <div class="row"><label>Principal<input name="principal" type="number" step="0.01" value="1000"
+                            required></label></div>
+                <div class="row"><label>Annual Interest Rate (%)<input name="rate_pct" type="number" step="0.0001"
+                            value="5" required></label></div>
+                <div class="row"><label>Years<input name="years" type="number" step="0.1" value="10" required></label>
+                </div>
+                <div class="row"><label>Compounds per Year<input name="compounds_per_year" type="number" value="12"
+                            required></label></div>
+                <div class="row"><label>Recurring Contribution per Period<input name="contribution" type="number"
+                            step="0.01" value="100" required></label></div>
+                <button type="submit">Calculate</button>
+                <small id="ciStatus" class="muted"></small>
+            </form>
+
+            <div id="ciResults" class="article" style="display:none">
+                <h3>Results</h3>
+                <ul class="metrics" id="ciSummary"></ul>
+                <div id="ciMiniChart" class="muted" style="margin-top:10px"></div>
+            </div>
+            <div id="ciChartWrap" style="margin-top:20px;display:none">
+                <h3>Growth Chart</h3>
+                <img id="ciChart" style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" />
+            </div>
+
+        </section>
+    </main>
+
+    <footer class="container footer"><small>© <span id="y"></span> [Your Name]</small></footer>
+
+    <!-- Reuse same API base as the site -->
+    <script>
+        const API = "https://fintech-portfolio-546985714630.europe-west1.run.app";
+
+        // 1) Load strategies
+        (async () => {
+            const sel = document.getElementById('strategy');
+            try {
+                const r = await fetch(`${API}/api/strategies`);
+                const data = await r.json(); // backend returns { items: [...] }
+                const items = data.items || data;
+                sel.innerHTML = items.map(s => `<option value="${s}">${s}</option>`).join('');
+            } catch {
+                sel.innerHTML = `<option value="SmaCross">SmaCross</option>`;
+            }
+        })();
+
+
+    </script>
+
+</body>
+
+</html>

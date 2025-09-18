@@ -15,6 +15,7 @@ function renderCard(p) {
   if (p.slug === 'compound') link = 'compound.html';
   else if (p.slug === 'stocks') link = 'stocks.html';
   else if (p.slug === 'forex') link = 'forex.html';
+  else if (p.slug === 'backTradeTest') link = 'backTradeTest.html';
   else link = 'project.html?slug=' + encodeURIComponent(p.slug);
 
   return `
