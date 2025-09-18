@@ -131,7 +131,7 @@
         const res = await fetch(`${window.API_BASE}/api/backtest`, {
           method: 'POST',
            headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
+          body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error('backtest failed');
         const out = await res.json();
