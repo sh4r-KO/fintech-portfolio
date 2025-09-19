@@ -643,8 +643,7 @@ from pathlib import Path
 from hashlib import md5
 import mimetypes
 
-app = FastAPI()
-GRAPHS_DIR = Path("output/graphs")  # adjust to your path
+
 
 def _nocache_headers(path: Path):
     # Optional: strong ETag based on file content
