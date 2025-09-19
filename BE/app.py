@@ -507,15 +507,15 @@ from fastapi.staticfiles import StaticFiles
 # mêmes dossiers que ci-dessus
 APP_DIR = Path(__file__).parent
 GRAPHS_DIR = APP_DIR / "backtrade" / "output" / "graphs"
-PRETTY_DIR = APP_DIR / "backtrade" / "output" / "pretty"
+#PRETTY_DIR = APP_DIR / "backtrade" / "output" / "pretty"
 GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
-PRETTY_DIR.mkdir(parents=True, exist_ok=True)
+#PRETTY_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount("/graphs", StaticFiles(directory=str(GRAPHS_DIR)), name="graphs")
-app.mount("/pretty", StaticFiles(directory=str(PRETTY_DIR)), name="pretty")
+#app.mount("/pretty", StaticFiles(directory=str(PRETTY_DIR)), name="pretty")
 
 def _clear_plots():
-    for d in (GRAPHS_DIR, PRETTY_DIR):
+    for d in (GRAPHS_DIR):
         d.mkdir(parents=True, exist_ok=True)
         for p in d.glob("*.png"):
             try: p.unlink()
@@ -591,11 +591,11 @@ def api_backtest(req: BacktestRequest):
     "TimeDD_bars.png","TotalReturn_%.png","VWR.png","WinRate_%.png"
     ]
     charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
-    pp = f"/pretty/{req.symbol}_{req.strategy}.png"
-
+    #pp = f"/pretty/{req.symbol}_{req.strategy}.png"
+    charts.append(f"/graphs/{req.symbol}_{req.strategy}.png")
     #plot = f"/pretty/{req.symbol}_{req.strategy}.png"
     
-    return {"ok": True, "metrics": result, "charts": charts,  "plot": str(pp) }
+    return {"ok": True, "metrics": result, "charts": charts}#,  "plot": str(pp) }
 
 
 

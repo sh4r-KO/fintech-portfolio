@@ -70,9 +70,9 @@ DATA_DIRS = [
 from pathlib import Path
 ROOT = Path(__file__).parent
 GRAPHS_DIR = ROOT / "backtrade" / "output" / "graphs"
-PRETTY_DIR = ROOT / "backtrade" / "output" / "pretty"
+#PRETTY_DIR = ROOT / "backtrade" / "output" / "pretty"
 GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
-PRETTY_DIR.mkdir(parents=True, exist_ok=True)
+#PRETTY_DIR.mkdir(parents=True, exist_ok=True)
 
 # ────────────────────────── HELPER FUNCTIONS ──────────────────────────
 DOWNLOADED_ONCE: set[str] = set()   # symbols we already tried to fetch locally
@@ -186,7 +186,7 @@ def _extract_tdrawdown(r: Any) -> float:
 
 
 # ────────────────────────── CORE BACKTEST RUN ─────────────────────────
-
+'''
 def run_one(symbol: str, strat_cls) -> Dict[str, Any]:
     
     cerebro = bt.Cerebro(stdstats=True)
@@ -356,7 +356,7 @@ def run_one(symbol: str, strat_cls) -> Dict[str, Any]:
     creategraph(ret, load_thresholds())
 
     return ret
-
+'''
 
 def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_capital: float, commission: float, slippage: float,
             ) -> Dict[str, Any]:
@@ -491,7 +491,7 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
         if sell_ser is not None:
             aps.append(mpf.make_addplot(sell_ser, type='scatter', marker='v', markersize=80))
 
-        pretty_png = PRETTY_DIR / f"{symbol}_{strat_cls.__name__}.png"
+        png_name = GRAPHS_DIR / f"{symbol}_{strat_cls.__name__}.png"
 
 
         mpf.plot(
@@ -499,9 +499,9 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
             addplot=aps, style='yahoo',
             figratio=(16,9), figsize=(12,6),
             title=f"{symbol} · {strat_cls.__name__}",
-            savefig=dict(fname=str(pretty_png), dpi=180, bbox_inches="tight"),
+            savefig=dict(fname=str(png_name), dpi=180, bbox_inches="tight"),
         )
-        print("Saved clean chart:", pretty_png)
+        print("Saved clean chart:", png_name)
     except Exception as e:
         print("[warn] pretty plot failed:", e)
 
@@ -528,8 +528,6 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
     creategraph(ret, load_thresholds("backtrade/DataManagement/data/PowerBi/Indicator_Target_Thresholds.csv"))
 
     return ret
-
-
 
 
 def creategraph(row: dict, thresholds: dict) -> None:
@@ -578,6 +576,7 @@ def creategraph(row: dict, thresholds: dict) -> None:
     #other kpi than gauge : 
 
  # ────────────────────────── PLOTTING HELPERS ──────────────────────────
+
 
 class EntryExitMarks(bt.Analyzer):
     """Record buy/sell moments based on position changes."""
