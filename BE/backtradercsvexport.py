@@ -566,7 +566,8 @@ def creategraph(row: dict, thresholds: dict) -> None:
             marker=marker,
             title=f"{symbol}_{strat}_{metric_name}",
             as_percent=("_%" in metric_name),
-            color=color
+            color=color,
+            return_fig=True
         )
 
         #outfile = outdir / f"{symbol}_{strat}_{metric_name}.png"

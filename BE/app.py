@@ -507,12 +507,8 @@ from fastapi.staticfiles import StaticFiles
 # mêmes dossiers que ci-dessus
 APP_DIR = Path(__file__).parent
 GRAPHS_DIR = APP_DIR / "backtrade" / "output" / "graphs"
-#PRETTY_DIR = APP_DIR / "backtrade" / "output" / "pretty"
 GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
-#PRETTY_DIR.mkdir(parents=True, exist_ok=True)
 
-#app.mount("/graphs", StaticFiles(directory=str(GRAPHS_DIR)), name="graphs")
-#app.mount("/pretty", StaticFiles(directory=str(PRETTY_DIR)), name="pretty")
 
 
 
@@ -589,9 +585,11 @@ def api_backtest(req: BacktestRequest):
     charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
     #pp = f"/pretty/{req.symbol}_{req.strategy}.png"
     charts.append(str(f"/graphs/{req.symbol}_{req.strategy}.png"))
-    plot = f"/graphs/{req.symbol}_{req.strategy}.png"
+    plot_path = GRAPHS_DIR / f"{req.symbol}_{req.strategy}.png"
+    plot_url  = f"/graphs/{req.symbol}_{req.strategy}.png" if plot_path.exists() else None
+
+    return {"ok": True, "metrics": result, "charts": charts, "plot": plot_url}
     
-    return {"ok": True, "metrics": result, "charts": charts,  "plot": plot }
 
 
 
