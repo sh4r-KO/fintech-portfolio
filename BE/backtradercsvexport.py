@@ -635,34 +635,3 @@ def main():
 #if __name__ == "__main__":
 #    main()
 
-
-# app.py
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
-from pathlib import Path
-from hashlib import md5
-import mimetypes
-
-
-
-def _nocache_headers(path: Path):
-    # Optional: strong ETag based on file content
-    h = md5(path.read_bytes()).hexdigest()
-    return {
-        "Cache-Control": "no-store, max-age=0, must-revalidate",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "ETag": h,
-    }
-
-@app.get("/graphs/{name}")
-def get_graph(name: str):
-    f = GRAPHS_DIR / name
-    if not f.exists() or not f.is_file():
-        raise HTTPException(404, "image not found")
-    mt, _ = mimetypes.guess_type(str(f))
-    return FileResponse(
-        path=f,
-        media_type=mt or "image/png",
-        headers=_nocache_headers(f),
-    )
