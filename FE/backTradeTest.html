@@ -146,12 +146,12 @@ const ABS = (u) => {
         `<li><strong>${k.replaceAll('_',' ')}:</strong> ${formatValue(k,v)}</li>`
       ).join('');
 
-      // ----- Big pretty plot (if provided) -----
+      // ----- Big pretty plot (if provided) -----max-width:1200px;
       if (out?.plot) {
         const src = ABS(out.plot);
         plotsEl.innerHTML = `
           <img id="btPretty" src="${src}" alt="backtest plot"
-               style="width:100%;max-width:1200px;border:1px solid #e5e7eb;border-radius:12px"
+               style="width:80%;border:1px solid #e5e7eb;border-radius:12px"
                onload="this.scrollIntoView({behavior:'smooth'})"
                onerror="this.closest('#btPlotWrap').style.display='none';">
         `;
