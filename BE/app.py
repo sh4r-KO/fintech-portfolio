@@ -514,13 +514,6 @@ GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/graphs", StaticFiles(directory=str(GRAPHS_DIR)), name="graphs")
 #app.mount("/pretty", StaticFiles(directory=str(PRETTY_DIR)), name="pretty")
 
-def _clear_plots():
-    for d in (GRAPHS_DIR):
-        d.mkdir(parents=True, exist_ok=True)
-        for p in d.glob("*.png"):
-            try: p.unlink()
-            except Exception as e: print(f"[warn] delete failed {p}: {e}")
-
 
 
 from pydantic import BaseModel, ConfigDict
@@ -570,7 +563,7 @@ def api_backtest(req: BacktestRequest):
         raise HTTPException(status_code=400, detail=f"_resolve_strategy(req.strategy) failed: {e}")
 
     try:
-        _clear_graphs_dir()
+        #_clear_graphs_dir()
         _clear_plots() 
         result = backtester.run_one(
             req.symbol,
@@ -612,11 +605,10 @@ async def unhandled_exceptions(_: Request, exc: Exception):
 def ping():
     return {"ok": True}
 
-def _clear_graphs_dir():
+def _clear_plots():
     GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
-    for pat in ("*.png", "*.jpg", "*.jpeg", "*.svg"):
-        for p in GRAPHS_DIR.glob(pat):
-            try:
-                p.unlink()  # Python 3.11 supports missing_ok=True if you prefer
-            except Exception as e:
-                print(f"[warn] failed to delete {p}: {e}")
+    for p in GRAPHS_DIR.glob("*.png"):
+        try:
+            p.unlink()
+        except Exception as e:
+            print(f"[warn] delete failed {p}: {e}")
