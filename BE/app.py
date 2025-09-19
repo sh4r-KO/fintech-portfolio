@@ -561,10 +561,13 @@ def api_backtest(req: BacktestRequest):
         StratCls = _resolve_strategy(req.strategy)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"_resolve_strategy(req.strategy) failed: {e}")
+    try:
+        _clear_plots()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"_clear_plots() failed: {e}")
+    
 
     try:
-        #_clear_graphs_dir()
-        _clear_plots() 
         result = backtester.run_one(
             req.symbol,
             StratCls,
