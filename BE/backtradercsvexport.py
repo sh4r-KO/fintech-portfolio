@@ -258,7 +258,7 @@ def run_one(symbol: str, strat_cls) -> Dict[str, Any]:
     else:
         sortino = float("nan")
     
-
+#
     # trade stats
     trades_dict = get("trades")
     def _safe(d, *keys, default=float("nan")):
