@@ -469,7 +469,7 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
         df = _price_df_for(symbol)
 
         # clip to backtest window if you want (optional)
-        df = df.loc[pd.to_datetime(load_startDate()): pd.to_datetime(load_endDate())]
+        #df = df.loc[pd.to_datetime(load_startDate()): pd.to_datetime(load_endDate())]
 
         # build addplots
         def _marker_series(df, event_dts):
@@ -494,13 +494,15 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
         png_name = GRAPHS_DIR / f"{symbol}_{strat_cls.__name__}.png"
 
 
-        mpf.plot(
+        fig, ax = mpf.plot(
             df, type='line', volume=True, mav=(12, 26),
             addplot=aps, style='yahoo',
             figratio=(16,9), figsize=(12,6),
             title=f"{symbol} · {strat_cls.__name__}",
             savefig=dict(fname=str(png_name), dpi=300, bbox_inches="tight"),
         )
+        fig.savefig(png_name, dpi=300, bbox_inches="tight")
+
         print("Saved clean chart:", png_name)
     except Exception as e:
         print("[warn] {symbol}_{strat_cls.__name__}.png failed:", e)

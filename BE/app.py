@@ -591,7 +591,7 @@ def api_backtest(req: BacktestRequest):
     charts.append(str(f"/graphs/{req.symbol}_{req.strategy}.png"))
     plot = f"/graphs/{req.symbol}_{req.strategy}.png"
     
-    return {"ok": True, "metrics": result, "charts": charts,  "plot": "TODO" }
+    return {"ok": True, "metrics": result, "charts": charts,  "plot": plot }
 
 
 
