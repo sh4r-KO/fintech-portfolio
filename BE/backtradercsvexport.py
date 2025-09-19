@@ -499,7 +499,8 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
             addplot=aps, style='yahoo',
             figratio=(16,9), figsize=(12,6),
             title=f"{symbol} · {strat_cls.__name__}",
-            savefig=dict(fname=str(png_name), dpi=300, bbox_inches="tight"),
+            returnfig=True
+            #,            savefig=dict(fname=str(png_name), dpi=300, bbox_inches="tight"),
         )
         fig.savefig(png_name, dpi=300, bbox_inches="tight")
 
@@ -566,8 +567,7 @@ def creategraph(row: dict, thresholds: dict) -> None:
             marker=marker,
             title=f"{symbol}_{strat}_{metric_name}",
             as_percent=("_%" in metric_name),
-            color=color,
-            return_fig=True
+            color=color
         )
 
         #outfile = outdir / f"{symbol}_{strat}_{metric_name}.png"
