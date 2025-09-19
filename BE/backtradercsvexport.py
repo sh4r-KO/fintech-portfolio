@@ -497,11 +497,11 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
         fig, ax = mpf.plot(
             df, type='line', volume=True, mav=(12, 26),
             addplot=aps, style='yahoo',
-            figratio=(16,9), figsize=(12,6),
+            figratio=(16,9), figsize=(24,12),
             title=f"{symbol} · {strat_cls.__name__}",
-            savefig=dict(fname=str(png_name), dpi=300, bbox_inches="tight"),
+            #savefig=dict(fname=str(png_name), dpi=300, bbox_inches="tight"),
         )
-        fig.savefig(png_name, dpi=300, bbox_inches="tight")
+        fig.savefig(png_name, dpi=600, bbox_inches="tight")
 
         print("Saved clean chart:", png_name)
     except Exception as e:
