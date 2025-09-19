@@ -454,8 +454,8 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
         win_rate = profit_factor = avg_trade_pl = float("nan")
 
     # save png plot chart(s)
-    outdir = Path("backtrade/output/plots")
-    outdir.mkdir(exist_ok=True)
+    #outdir = Path("backtrade/output/plots")
+    #outdir.mkdir(exist_ok=True)
 
     
     # pretty mplfinance chart with buy/sell markers

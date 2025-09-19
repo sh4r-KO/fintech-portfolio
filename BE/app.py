@@ -592,7 +592,7 @@ def api_backtest(req: BacktestRequest):
     ]
     charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
     #pp = f"/pretty/{req.symbol}_{req.strategy}.png"
-    charts.append(f"/graphs/{req.symbol}_{req.strategy}.png")
+    charts.append(str(f"/graphs/{req.symbol}_{req.strategy}.png"))
     #plot = f"/pretty/{req.symbol}_{req.strategy}.png"
     
     return {"ok": True, "metrics": result, "charts": charts}#,  "plot": str(pp) }
