@@ -98,7 +98,13 @@
     const kpiImgsEl  = document.getElementById('btKpiImgs');
 
     // --------- Helpers (declared before use) ---------
-    const ABS = (u) => /^https?:\/\//i.test(u) ? u : (window.API_BASE.replace(/\/$/, '') + u);
+const ABS = (u) => {
+  const abs = /^https?:\/\//i.test(u) ? u : (window.API_BASE.replace(/\/$/, '') + u);
+  // hard-bust caches for PNGs (KPI gauges & pretty plot reuse filenames)
+  return /\.png(?:$|\?)/i.test(abs)
+    ? abs + (abs.includes('?') ? '&' : '?') + 't=' + Date.now()
+    : abs;
+};
 
     const toNum = (x) => {
       if (x === null || x === undefined || x === '') return undefined;

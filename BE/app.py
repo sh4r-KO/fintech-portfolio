@@ -614,7 +614,7 @@ def _clear_plots():
         try:
             p.unlink()
         except Exception as e:
-            print(f"[warn] delete failed {p}: {e}")
+            raise HTTPException(500, p, "error : _clear_plots : image not found")
 
 
 
