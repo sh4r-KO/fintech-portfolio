@@ -150,7 +150,7 @@ const ABS = (u) => {
       if (out?.plot) {
         const src = ABS(out.plot);
         plotsEl.innerHTML = `
-          <img id="btPretty" src="${src}" alt="backtest plot"
+          <img src="${src}" alt="backtest plot"
                style="width:80%;border:1px solid #e5e7eb;border-radius:12px"
                onload="this.scrollIntoView({behavior:'smooth'})"
                onerror="this.closest('#btPlotWrap').style.display='none';">
