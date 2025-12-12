@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Stocks — Fintech & PySpark Portfolio</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <header class="container header">
     <a href="/" class="logo">Home</a>
@@ -37,7 +39,7 @@
             </select>
           </label>
         </div>
-        <button type="submit">Fetch & Plot</button>
+        <button id="stkBtn" type="submit">Fetch & Plot</button>
         <small id="stkStatus" class="muted"></small>
       </form>
 
@@ -46,7 +48,7 @@
         <ul class="metrics" id="stkSummary"></ul>
         <div id="stkChartWrap" style="margin-top:10px; display:none">
           <h3>Chart</h3>
-          <img id="stkChart" style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" alt="Stock chart"/>
+          <img id="stkChart" style="max-width:100%;border:1px solid #e5e7eb;border-radius:12px" alt="Stock chart" />
         </div>
       </div>
     </section>
@@ -54,7 +56,7 @@
 
   <footer class="container footer"><small>© <span id="y"></span> [Aguirre Cabrol]</small></footer>
 
-  <script>window.API_BASE="https://fintech-portfolio-546985714630.europe-west1.run.app";</script>
+  <script>window.API_BASE = "";</script>
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
 
@@ -62,9 +64,20 @@
     const statusEl = document.getElementById('stkStatus');
     const resultsWrap = document.getElementById('stkResults');
     const summaryEl = document.getElementById('stkSummary');
+    const btn = document.getElementById('stkBtn');
+
+    let inFlight = false;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      if (inFlight) return;              // prevents spam/double submit
+      inFlight = true;
+
+      btn.disabled = true;               // disable button
+      const oldLabel = btn.textContent;
+      btn.textContent = 'Loading…';      // optional: UX feedback
+
       statusEl.textContent = 'Loading…';
       resultsWrap.style.display = 'none';
 
@@ -76,45 +89,60 @@
       try {
         // JSON meta
         const res = await fetch(`${window.API_BASE}/api/stocks/series`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
         if (!res.ok) throw new Error('series failed');
         const out = await res.json();
 
-        const fmt = (x, d=2) => Number(x).toLocaleString(undefined, {maximumFractionDigits:d});
+        const fmt = (x, d = 2) => Number(x).toLocaleString(undefined, { maximumFractionDigits: d });
         const color = out.change_abs >= 0 ? '#34d399' : '#ef4444';
         summaryEl.innerHTML = `
-          <li><strong>${out.symbol}</strong></li>
-          <li><strong>Rows:</strong> ${out.rows.toLocaleString()}</li>
-          <li><strong>First:</strong> ${out.first_date} — <strong>Last:</strong> ${out.last_date}</li>
-          <li><strong>Close:</strong> ${fmt(out.close_first)} → ${fmt(out.close_last)}</li>
-          <li><strong>Change:</strong> <span style="color:${color}">${fmt(out.change_abs)} (${fmt(out.change_pct)}%)</span></li>
-        `;
+        <li><strong>${out.symbol}</strong></li>
+        <li><strong>Rows:</strong> ${out.rows.toLocaleString()}</li>
+        <li><strong>First:</strong> ${out.first_date} — <strong>Last:</strong> ${out.last_date}</li>
+        <li><strong>Close:</strong> ${fmt(out.close_first)} → ${fmt(out.close_last)}</li>
+        <li><strong>Change:</strong> <span style="color:${color}">${fmt(out.change_abs)} (${fmt(out.change_pct)}%)</span></li>
+      `;
         resultsWrap.style.display = '';
 
         // PNG chart
         const chartWrap = document.getElementById('stkChartWrap');
-        const chartImg  = document.getElementById('stkChart');
+        const chartImg = document.getElementById('stkChart');
+
         const resImg = await fetch(`${window.API_BASE}/api/stocks/plot`, {
-          method: 'POST', headers: { 'Content-Type':'application/json' },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
+
         if (resImg.ok) {
           const blob = await resImg.blob();
           const prev = chartImg.dataset.url;
           if (prev) URL.revokeObjectURL(prev);
+
           const url = URL.createObjectURL(blob);
-          chartImg.src = url; chartImg.dataset.url = url;
+          chartImg.src = url;
+          chartImg.dataset.url = url;
           chartWrap.style.display = '';
         } else {
           chartWrap.style.display = 'none';
         }
+
         statusEl.textContent = '';
+
       } catch (err) {
         statusEl.textContent = 'Error. Please check the ticker or try again later.';
+      } finally {
+        // always re-enable
+        inFlight = false;
+        btn.disabled = false;
+        btn.textContent = oldLabel;
       }
     });
   </script>
+
 </body>
+
 </html>

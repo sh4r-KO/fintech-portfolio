@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr,Field
 from typing import List, Optional
@@ -414,7 +414,12 @@ def _filter_period(dates, closes, period):
 def _parse_alpha_series(js):
     KEY = "Monthly Adjusted Time Series"
     if KEY not in js:
-        msg = js.get("Note") or js.get("Error Message") or "Unexpected response"
+        msg = (
+            js.get("Note")
+            or js.get("Information")
+            or js.get("Error Message")
+            or f"Unexpected response keys: {list(js.keys())}"
+        )
         raise HTTPException(status_code=502, detail=msg)
     series = js[KEY]
     dates, closes = [], []
@@ -431,17 +436,36 @@ def _parse_alpha_series(js):
         raise HTTPException(status_code=502, detail="Alpha Vantage returned too few rows.")
     return dates, closes
 
+import time
+from typing import Dict, Tuple, Any
+
+_ALPHA_CACHE: Dict[str, Tuple[float, Any]] = {}
+_ALPHA_TTL_SECONDS = 60  # 1 minute
+
 async def _fetch_monthly_adjusted(symbol: str):
     if not ALPHA_KEY:
         raise HTTPException(status_code=500, detail="ALPHAVANTAGE_API_KEY not configured")
-    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol={symbol}&apikey={ALPHA_KEY}"
+
+    now = time.time()
+    hit = _ALPHA_CACHE.get(symbol)
+    if hit and (now - hit[0]) < _ALPHA_TTL_SECONDS:
+        return hit[1]
+
+    url = (
+        "https://www.alphavantage.co/query"
+        f"?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol={symbol}&apikey={ALPHA_KEY}"
+    )
     async with httpx.AsyncClient(timeout=20) as client:
         r = await client.get(url)
         r.raise_for_status()
-        return r.json()
+        data = r.json()
+
+    _ALPHA_CACHE[symbol] = (now, data)
+    return data
 
 @app.post("/api/stocks/series", response_model=StockSeriesOut)
 async def stocks_series(payload: StockInput):
+    #raise HTTPException(status_code=501, detail="app.py 455")
     sym = payload.symbol.strip().upper()
     js = await _fetch_monthly_adjusted(sym)
     dates, closes = _parse_alpha_series(js)
@@ -457,6 +481,8 @@ async def stocks_series(payload: StockInput):
         period=payload.period, close_first=c0, close_last=c1,
         change_abs=change_abs, change_pct=change_pct
     )
+
+
 
 @app.post("/api/stocks/plot")
 async def stocks_plot(payload: StockInput):
@@ -490,6 +516,7 @@ async def stocks_plot(payload: StockInput):
     plt.savefig(buf, format="png")
     plt.close(fig); buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
+
 from fastapi import HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -599,8 +626,13 @@ from starlette.requests import Request
 
 @app.exception_handler(Exception)
 async def unhandled_exceptions(_: Request, exc: Exception):
-    # surface the real error instead of a blank 500
-    return JSONResponse(status_code=500, content={"detail": str(exc)})
+    if isinstance(exc, HTTPException):
+        raise exc  # let FastAPI handle it normally
+
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)}
+    )
 
 @app.get("/api/ping")
 def ping():
@@ -646,3 +678,18 @@ def get_graph(name: str):
         media_type=mt or "image/png",
         headers=_nocache_headers(f),
     )
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+ROOT_DIR = APP_DIR.parent          # .../fintech-portfolio
+FE_DIR = ROOT_DIR / "FE"           # .../fintech-portfolio/FE
+
+if FE_DIR.exists():
+    # Serve all FE files (html, css, js, images) under "/"
+    app.mount(
+        "/",
+        StaticFiles(directory=FE_DIR, html=True),
+        name="frontend",
+    )
+

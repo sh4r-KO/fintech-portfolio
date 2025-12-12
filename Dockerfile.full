@@ -1,0 +1,25 @@
+# fintech-portfolio/Dockerfile.full
+FROM python:3.11-slim
+
+# Install system deps if needed (optional, usually fine without)
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# --- Install backend dependencies ---
+COPY BE/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# --- Copy backend and frontend code ---
+COPY BE ./BE
+COPY FE ./FE
+
+ENV PYTHONUNBUFFERED=1 MPLBACKEND=Agg PYTHONPATH=/app/BE
+
+
+# Expose the port FastAPI will listen on
+EXPOSE 8080
+
+# Run the FastAPI app in BE/app.py
+CMD ["uvicorn", "BE.app:app", "--host", "0.0.0.0", "--port", "8080"]

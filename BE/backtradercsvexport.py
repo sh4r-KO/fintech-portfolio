@@ -48,7 +48,8 @@ import mplfinance as mpf
 
 # ─────────────────────────── CONFIGURATION ────────────────────────────
 
-CONFIG_FILE = "backtrade/config.yaml"
+BASE_DIR = Path(__file__).resolve().parent           # .../BE
+CONFIG_FILE = BASE_DIR / "backtrade" / "config.yaml" # .../BE/backtrade/config.yaml
 
 SYMBOLS = ["SPY", "QQQ", "MTUM","EEM","TLT","GLD","IEF","MSFT", "AAPL", "NVDA","META"]
 SYMBOLS = load_symbols(CONFIG_FILE)

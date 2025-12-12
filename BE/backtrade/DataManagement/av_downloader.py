@@ -135,7 +135,7 @@ def av_doawnloader_main(configFile: str):
     ap.add_argument("-c", "--config", default=configFile, help="YAML config (default: config.yaml)")
     ap.add_argument("-o", "--outdir", default="DataManagement/data/alpha", help="Output dir (default: DataManagement/data/alpha)")
     ap.add_argument("--intraday", type=int, choices=[1, 5, 15, 30, 60], help="Interval in minutes (skip for daily)")
-    opts = ap.parse_args()
+    opts = ap.parse_args(args=[])
 
     api_key = "YLTAIJTQU30FT5WU"
     if not api_key:
