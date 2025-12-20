@@ -602,8 +602,10 @@ def api_backtest(req: BacktestRequest):
             slippage=req.slippage,
         )
         if not result:
-            raise HTTPException(502, detail="No data feed returned (make_feed returned None). Check date range / MINBARS / data files.")
+            raise HTTPException(status_code=502,detail="No data feed returned (make_feed returned None). Check date range / MINBARS / data files.")
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Backtest failed: {e}. cant run_one")
 

@@ -63,9 +63,16 @@ CSV_PATH = load_output_csv(CONFIG_FILE)
 
 MINBARS = 80 #252 before when the fremim of AV was better
 
+from pathlib import Path
+ROOT = Path(__file__).parent
+
 DATA_DIRS = [
-    Path("backtrade/DataManagement/data/alpha"),        # av_downloader.py output
-    Path("backtrade/DataManagement/data/stooq"),        # fetch_stooq_daily.py output
+    ROOT / "backtrade" / "DataManagement" / "data" / "alpha",
+    ROOT / "backtrade" / "DataManagement" / "data" / "stooq",
+
+    # also support the paths your log shows:
+    ROOT / "DataManagement" / "data" / "alpha",
+    ROOT / "DataManagement" / "data" / "stooq",
 ]
 
 from pathlib import Path
@@ -359,7 +366,7 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
         "Sortino": sortino
     }
 
-    creategraph(ret, load_thresholds("backtrade/DataManagement/data/PowerBi/Indicator_Target_Thresholds.csv"))
+    creategraph(ret, load_thresholds())
 
     return ret
 

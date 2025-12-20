@@ -124,7 +124,13 @@ def filter_available(tickers: list[str]) -> list[str]:
             pass                      # network hiccup or 4xx error → skip
     return ok
 
-def load_thresholds(path="DataManagement\data\PowerBi\Indicator_Target_Thresholds.csv") -> dict:
+
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent   # /app/BE
+thresholds_path = BASE_DIR / "backtrade" / "DataManagement" / "data" / "PowerBi" / "Indicator_Target_Thresholds.csv"
+
+def load_thresholds(path=thresholds_path) -> dict:
     df = pd.read_csv(path)
     thresholds = {}
     for _, row in df.iterrows():
