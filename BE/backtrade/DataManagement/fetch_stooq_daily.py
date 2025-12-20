@@ -1,14 +1,36 @@
+import pathlib
+from typing import Iterable, List, Optional
 
-#TODO change to get more symbols, this is pathetic
+import pandas_datareader.data as web
 
 
-import pandas_datareader.data as web, pathlib, sys
+def import_stooq(symbols: Optional[Iterable[str]] = None) -> List[pathlib.Path]:
+    """
+    Download daily history from Stooq for each symbol and save to DataManagement/data/stooq/<SYMBOL>_d.csv.
 
-def import_stooq():
-    syms = sys.argv[1:] or ["SPY", "AAPL", "QQQ"]     # read from YAML later
-    out = pathlib.Path(r"DataManagement/data/stooq"); out.mkdir(parents=True, exist_ok=True)
+    - If `symbols` is None: uses a small default list (handy for CLI/tests).
+    - IMPORTANT: does NOT read sys.argv (so it is safe to call from a running API server).
+    """
+    syms = list(symbols) if symbols is not None else ["SPY", "AAPL", "QQQ"]
 
+    out = pathlib.Path("DataManagement/data/stooq")
+    out.mkdir(parents=True, exist_ok=True)
+
+    saved: List[pathlib.Path] = []
     for s in syms:
-        df = web.DataReader("SPY", "stooq")              # full daily history
-        df.to_csv(out / f"{s}_d.csv")
-        print(f"Saved {s}  →  {out}/{s}_d.csv  ({len(df)} rows)")
+        # Use s, not "SPY"
+        df = web.DataReader(s, "stooq")
+        p = out / f"{s}_d.csv"
+        df.to_csv(p)
+        print(f"Saved {s}  →  {p}  ({len(df)} rows)")
+        saved.append(p)
+
+    return saved
+
+
+if __name__ == "__main__":
+    import sys
+
+    # CLI usage: python fetch_stooq_daily.py AAPL MSFT SPY
+    # If none provided, defaults kick in.
+    import_stooq(sys.argv[1:] or None)

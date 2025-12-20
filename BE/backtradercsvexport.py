@@ -36,7 +36,7 @@ import math
 import numpy as np
 from pathlib import Path
 from backtrade.DataManagement.av_downloader import av_doawnloader_main
-#from backtrade.DataManagement.fetch_stooq_daily import import_stooq
+from backtrade.DataManagement.fetch_stooq_daily import import_stooq
 
 from datetime import datetime
 
@@ -61,7 +61,7 @@ STRATEGIES = load_strats(CONFIG_FILE)
 CSV_PATH = "results.csv"
 CSV_PATH = load_output_csv(CONFIG_FILE)
 
-MINBARS = 252
+MINBARS = 80 #252 before when the fremim of AV was better
 
 DATA_DIRS = [
     Path("backtrade/DataManagement/data/alpha"),        # av_downloader.py output
@@ -114,7 +114,7 @@ def make_feed(symbol: str,
     if symbol not in DOWNLOADED_ONCE:
         try:
             av_doawnloader_main(CONFIG_FILE)
-            import_stooq()
+            import_stooq([symbol])
         except Exception as err:
             print(f"[warn] backtradercsvexport.make_feed : local data fetchers failed for {symbol}: {err}")
         finally:
@@ -137,7 +137,7 @@ def make_feed(symbol: str,
                 todate       = end_dt,
             )
 
-    # fallback: yfinance (dates applied here too)
+'''    # fallback: yfinance (dates applied here too)
     ysym = symbol.replace(".", "-").upper()
     try:
         df = yf.download(
@@ -163,7 +163,7 @@ def make_feed(symbol: str,
         df.columns = df.columns.get_level_values(0)
     df.columns = [c.title() for c in df.columns]
     print("backtradercsvexport.make_feed : used yfinance for:", symbol)
-    return bt.feeds.PandasData(dataname=df)
+    return bt.feeds.PandasData(dataname=df)'''
 
 
 def _safe_add(cerebro: bt.Cerebro, ancls, alias: str | None = None, **kwargs):

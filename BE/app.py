@@ -601,6 +601,9 @@ def api_backtest(req: BacktestRequest):
             commission=req.commission,
             slippage=req.slippage,
         )
+        if not result:
+            raise HTTPException(502, detail="No data feed returned (make_feed returned None). Check date range / MINBARS / data files.")
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Backtest failed: {e}. cant run_one")
 
@@ -612,7 +615,15 @@ def api_backtest(req: BacktestRequest):
     ]
     charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
     #pp = f"/pretty/{req.symbol}_{req.strategy}.png"
-    charts.append(str(f"/graphs/{req.symbol}_{req.strategy}.png"))
+    plot_name = f"{req.symbol}_{req.strategy}.png"
+    plot_path = GRAPHS_DIR / plot_name
+    plot_url  = f"/graphs/{plot_name}" if plot_path.exists() else None
+
+    charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
+    if plot_url:
+        charts.append(plot_url)
+
+    return {"ok": True, "metrics": result, "charts": charts, "plot": plot_url}
     plot_path = GRAPHS_DIR / f"{req.symbol}_{req.strategy}.png"
     plot_url  = f"/graphs/{req.symbol}_{req.strategy}.png" if plot_path.exists() else None
 
