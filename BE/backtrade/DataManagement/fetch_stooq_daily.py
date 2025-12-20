@@ -1,5 +1,7 @@
 
 #TODO change to get more symbols, this is pathetic
+
+
 import pandas_datareader.data as web, pathlib, sys
 
 def import_stooq():

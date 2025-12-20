@@ -32,7 +32,7 @@ strats:
 
 
 symbols:
-  - SPY
+#  - SPY
 #  - QQQ
 #  - MTUM
 #  - EEM
@@ -40,7 +40,7 @@ symbols:
 #  - GLD
 #  - IEF
 #  - MSFT
-#  - AAPL
+  - AAPL
 #  - NVDA
 #  - META
 #  - BTC

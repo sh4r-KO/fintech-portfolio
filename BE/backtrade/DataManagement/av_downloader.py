@@ -47,7 +47,7 @@ import yaml
 # Helpers
 # ---------------------------------------------------------------------------
 
-AV_BASE = "https://www.alphavantage.co/query?datatype=csv&outputsize=full"
+AV_BASE = "https://www.alphavantage.co/query?datatype=csv&outputsize=compact"
 
 
 def parse_yaml_symbols(cfg_path: Path | str) -> list[str]:
@@ -74,6 +74,7 @@ def parse_yaml_symbols(cfg_path: Path | str) -> list[str]:
 
 
 def _av_get(params: str, api_key: str) -> str:
+    print("[INFO] avdownloader._av_get : used following api_key",api_key)
     url = f"{AV_BASE}&apikey={api_key}&{params}"
     r = requests.get(url, timeout=30)
     r.raise_for_status()
@@ -85,6 +86,7 @@ def fetch_daily_csv(symbol: str, api_key: str) -> tuple[str, str]:
     # 1) try the fully‑adjusted endpoint (may be premium for big tickers)
     txt = _av_get(f"function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}", api_key)
     if _looks_like_premium(txt):
+        time.sleep(2)
         # 2) fall back to the free un‑adjusted endpoint
         txt = _av_get(f"function=TIME_SERIES_DAILY&symbol={symbol}", api_key)
         if _looks_like_premium(txt):
@@ -108,13 +110,39 @@ def _looks_like_premium(text: str) -> bool:
 
 
 def convert_to_bt_rows(raw_csv: str) -> list[list[str]]:
-    reader = csv.DictReader(raw_csv.splitlines())
-    rows = [
-        [row["timestamp"][:19], row["open"], row["high"], row["low"], row["close"], row["volume"]]
-        for row in reader
-    ]
-    rows.sort(key=lambda r: r[0])  # ascending time
+    lines = raw_csv.splitlines()
+    if not lines:
+        raise RuntimeError("Empty response from Alpha Vantage")
+
+    header = lines[0].strip()
+    reader = csv.DictReader(lines)
+
+    # Accept a few common variants just in case
+    ts_key = None
+    for k in ("timestamp", "date", "time"):
+        if k in (reader.fieldnames or []):
+            ts_key = k
+            break
+
+    if not ts_key:
+        # Show the header (and a tiny snippet) so you immediately see what AV returned
+        snippet = "\n".join(lines[:3])
+        raise RuntimeError(f"Unexpected CSV header (no timestamp): {header}\nFirst lines:\n{snippet}")
+
+    rows = []
+    for row in reader:
+        rows.append([
+            row[ts_key][:19],
+            row.get("open", ""),
+            row.get("high", ""),
+            row.get("low", ""),
+            row.get("close", ""),
+            row.get("volume", ""),
+        ])
+
+    rows.sort(key=lambda r: r[0])
     return rows
+
 
 
 def save_rows(path: Path, rows: list[list[str]]):
@@ -137,7 +165,9 @@ def av_doawnloader_main(configFile: str):
     ap.add_argument("--intraday", type=int, choices=[1, 5, 15, 30, 60], help="Interval in minutes (skip for daily)")
     opts = ap.parse_args(args=[])
 
-    api_key = "YLTAIJTQU30FT5WU"
+    api_key = os.getenv("AV_KEY") or os.getenv("ALPHAVANTAGE_API_KEY")
+
+
     if not api_key:
         sys.exit("Set AV_KEY environment variable with your Alpha Vantage API key.")
 
@@ -148,7 +178,7 @@ def av_doawnloader_main(configFile: str):
     outdir = Path(opts.outdir)
     intrv = opts.intraday
 
-    print(f"Fetching {len(symbols)} symbol(s) from Alpha Vantage …\n")
+    print(f"[INFO] av_doawnloader.av_doawnloader_main : Fetching {len(symbols)} symbol(s) from Alpha Vantage …")
 
     for idx, sym in enumerate(symbols, 1):
         try:
@@ -166,14 +196,14 @@ def av_doawnloader_main(configFile: str):
             print(f"[{idx}/{len(symbols)}] {sym} ← {endpoint}  → {fname}  ({len(rows)} rows)")
 
         except Exception as exc:
-            print(f"[warn] {sym}: {exc}")
+            print(f"[Exception] av_doawnloader.av_doawnloader_main : {sym}: {exc}")
 
         # Free tier: 5 calls / min (12‑second gap keeps us safe)
         if idx < len(symbols):
             time.sleep(12)
 
-    print("\nDone.  You can now point backtrader_yaml_runner at the new CSVs.")
+    print("[INFO] av_doawnloader.av_doawnloader_main : Done.  You can now point backtrader_yaml_runner at the new CSVs.")
 
 
 if __name__ == "__main__":
-    av_doawnloader_main("config2.yaml")
+    av_doawnloader_main("config.yaml")

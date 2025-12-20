@@ -36,7 +36,7 @@ import math
 import numpy as np
 from pathlib import Path
 from backtrade.DataManagement.av_downloader import av_doawnloader_main
-from backtrade.DataManagement.fetch_stooq_daily import import_stooq
+#from backtrade.DataManagement.fetch_stooq_daily import import_stooq
 
 from datetime import datetime
 
@@ -116,7 +116,7 @@ def make_feed(symbol: str,
             av_doawnloader_main(CONFIG_FILE)
             import_stooq()
         except Exception as err:
-            print(f"[warn] local data fetchers failed for {symbol}: {err}")
+            print(f"[warn] backtradercsvexport.make_feed : local data fetchers failed for {symbol}: {err}")
         finally:
             DOWNLOADED_ONCE.add(symbol)
 
@@ -125,7 +125,7 @@ def make_feed(symbol: str,
             tf   = bt.TimeFrame.Minutes if "_m" in cand.stem else bt.TimeFrame.Days
             comp = int(cand.stem.split("_")[-1][:-1]) if "_m" in cand.stem else 1
             fmt  = "%Y-%m-%d %H:%M:%S" if tf is bt.TimeFrame.Minutes else "%Y-%m-%d"
-            print("using local file after fetch:", cand)
+            print("backtradercsvexport.make_feed : using local file after fetch:", cand)
             return bt.feeds.GenericCSVData(
                 dataname     = str(cand),
                 dtformat     = fmt,
@@ -149,20 +149,20 @@ def make_feed(symbol: str,
             auto_adjust=auto_adjust
         )
     except Exception as err:
-        print(f"[skip] {symbol}: yfinance error → {err}")
+        print(f"[skip] backtradercsvexport.make_feed : {symbol}: yfinance error → {err}")
         return None
 
     if df.empty:
-        print(f"[skip] {symbol}: no data from Yahoo")
+        print(f"[skip] backtradercsvexport.make_feed : {symbol}: no data from Yahoo")
         return None
     elif len(df) < MINBARS:
-        print(f"[skip] {symbol}: only {len(df)} bars (< {MINBARS})")
+        print(f"[skip] backtradercsvexport.make_feed : {symbol}: only {len(df)} bars (< {MINBARS})")
         return None
 
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
     df.columns = [c.title() for c in df.columns]
-    print("used yfinance for:", symbol)
+    print("backtradercsvexport.make_feed : used yfinance for:", symbol)
     return bt.feeds.PandasData(dataname=df)
 
 
@@ -187,178 +187,8 @@ def _extract_tdrawdown(r: Any) -> float:
 
 
 # ────────────────────────── CORE BACKTEST RUN ─────────────────────────
-'''
-def run_one(symbol: str, strat_cls) -> Dict[str, Any]:
-    
-    cerebro = bt.Cerebro(stdstats=True)
-    cerebro.broker.setcash(load_capital())
-    cerebro.broker.setcommission(commission=load_comission())
-    cerebro.broker.set_slippage_perc(perc=load_slippage(), slip_open=True, slip_limit=True, slip_match=True, slip_out=False)
-
-    cerebro.addsizer(bt.sizers.PercentSizer, percents=95)#added for sharpeRatio
-    
-    feed = make_feed(symbol, start=load_startDate(), end=load_endDate())
-    if feed is None:             
-            return {} 
-
-    cerebro.adddata(feed, name=symbol)
-    cerebro.addstrategy(strat_cls)
-
-    _safe_add(cerebro, bt.analyzers.SharpeRatio,"sharpe",timeframe=bt.TimeFrame.Days)         
-    _safe_add(cerebro, bt.analyzers.SharpeRatio_A,"sharpe_ann",timeframe=bt.TimeFrame.Days)        
-    _safe_add(cerebro, bt.analyzers.DrawDown,         "dd")
-    _safe_add(cerebro, bt.analyzers.TimeDrawDown,     "tdd")
-    _safe_add(cerebro, bt.analyzers.Calmar,           "calmar")
-    _safe_add(cerebro, bt.analyzers.Returns,          "returns")
-    _safe_add(cerebro, bt.analyzers.VWR,              "vwr")
-    _safe_add(cerebro, bt.analyzers.SQN,              "sqn")
-    _safe_add(cerebro, bt.analyzers.TradeAnalyzer,    "trades")
-    _safe_add(cerebro, bt.analyzers.TimeReturn, "trets",timeframe=bt.TimeFrame.Days)
-    _safe_add(cerebro, EntryExitMarks, "marks")     
-
-    strat = cerebro.run()[0]
-
-
-
-    # small helper: fetch analyzer results if present
-    def get(name: str, path=None, default=float("nan")):
-        if hasattr(strat.analyzers, name):
-            res = getattr(strat.analyzers, name).get_analysis()
-            return res if path is None else path(res)
-        return default
-
-
-    # performance metrics
-    total_ret   = get("returns",    lambda r: r.get("rtot", float("nan")) )
-    rnorm100    = get("returns",    lambda r: r.get("rnorm100", float("nan"))/100)  # already %
-    sharpe_d    = get("sharpe",     lambda r: r.get("sharperatio", float("nan")))
-    sharpe_ann  = get("sharpe_ann", lambda r: r.get("sharperatio", float("nan")))
-    max_dd      = get("dd",         lambda r: r.get("max", {}).get("drawdown", float("nan"))/100*-1)
-    td_dd       = get("tdd",        _extract_tdrawdown)
-    vwr         = get("vwr",        lambda r: r.get("vwr",         float("nan")))
-    sqn         = get("sqn",        lambda r: r.get("sqn",         float("nan")))
-    calmar = (rnorm100 / abs(max_dd)
-        if not math.isnan(rnorm100) and not math.isnan(max_dd) and max_dd
-        else float("nan")
-    )
-    # fallback ⇒ use draw-down length from the regular DD analyzer
-    if math.isnan(td_dd):
-        td_dd = get("dd", lambda r: r.get("max", {}).get("len", float("nan")))
-
-    #sortino
-    rets = get("trets")         # dict {datetime: return}
-    if isinstance(rets, dict) and rets:
-        rvals   = list(rets.values())
-        target  = 0.0                         # MAR / risk-free per period
-        downside = [r for r in rvals if r < target]
-        if downside:                          # avoid div-by-zero
-            sortino = (np.mean(rvals) - target) / np.std(downside, ddof=1)
-            sortino *= math.sqrt(252)         # annualise (daily → year)
-        else:
-            sortino = float("inf")            # no losses → perfect
-    else:
-        sortino = float("nan")
-    
-#
-    # trade stats
-    trades_dict = get("trades")
-    def _safe(d, *keys, default=float("nan")):
-        for k in keys:
-            if isinstance(d, dict) and k in d:
-                d = d[k]
-            else:
-                return default
-        return d
-
-    if isinstance(trades_dict, dict):
-        wins_total   = _safe(trades_dict, "won",   "total")
-        trades_total = _safe(trades_dict, "total", "total")
-        win_rate     = (wins_total / trades_total ) if trades_total else float("nan")
-
-        pnl_win  = _safe(trades_dict, "won",  "pnl", "total", default=0)
-        pnl_los  = _safe(trades_dict, "lost", "pnl", "total", default=0)
-        profit_factor = (pnl_win / abs(pnl_los)) if pnl_los else float("nan")
-        avg_trade_pl  = _safe(trades_dict, "pnl", "net", "average")
-    else:
-        win_rate = profit_factor = avg_trade_pl = float("nan")
-
-    # save png plot chart(s)
-    outdir = Path("backtrade/output/plots")
-    outdir.mkdir(exist_ok=True)
-
-    
-    # pretty mplfinance chart with buy/sell markers
-    try:
-        # collect markers
-        recs = getattr(strat.analyzers, "marks").get_analysis() if hasattr(strat.analyzers, "marks") else []
-        buys  = [dt for kind, dt, px in recs if kind == 'buy']
-        sells = [dt for kind, dt, px in recs if kind == 'sell']
-
-        # price dataframe
-        df = _price_df_for(symbol)
-
-        # clip to backtest window if you want (optional)
-        df = df.loc[pd.to_datetime(load_startDate()): pd.to_datetime(load_endDate())]
-
-        # build addplots
-        def _marker_series(df, event_dts):
-            if not event_dts:
-                return None
-            # normalize both to dates
-            ev_idx = pd.to_datetime(event_dts).tz_localize(None).normalize()
-            idx_norm = df.index.tz_localize(None).normalize() if df.index.tz is not None else df.index.normalize()
-            mask = idx_norm.isin(ev_idx)
-            # series with NaN except where we have an event (use Close for y)
-            return pd.Series(np.where(mask, df['Close'].values, np.nan), index=df.index)
-
-        buy_ser  = _marker_series(df, buys)
-        sell_ser = _marker_series(df, sells)
-
-        aps = []
-        if buy_ser is not None:
-            aps.append(mpf.make_addplot(buy_ser, type='scatter', marker='^', markersize=80))
-        if sell_ser is not None:
-            aps.append(mpf.make_addplot(sell_ser, type='scatter', marker='v', markersize=80))
-
-        pretty_dir = Path("backtrade/output/pretty"); pretty_dir.mkdir(parents=True, exist_ok=True)
-        pretty_png = pretty_dir / f"{symbol}_{strat_cls.__name__}.png"
-
-        mpf.plot(
-            df, type='line', volume=True, mav=(12, 26),
-            addplot=aps, style='yahoo',
-            figratio=(16,9), figsize=(12,6),
-            title=f"{symbol} · {strat_cls.__name__}",
-            savefig=dict(fname=str(pretty_png), dpi=180, bbox_inches="tight"),
-        )
-        print("Saved clean chart:", pretty_png)
-    except Exception as e:
-        print("[warn] pretty plot failed:", e)
-
-
-    ret = {
-        "Symbol": symbol,
-        "Strategy": strat_cls.__name__,
-        "TotalReturn_%": total_ret,
-        "rnorm100_%": rnorm100,
-        "SharpeDaily": sharpe_d,
-        "SharpeAnnual": sharpe_ann,
-        "Calmar": calmar,
-        "MaxDrawdown_%": max_dd,
-        "TimeDD_bars": -td_dd,
-        "VWR": vwr,
-        "SQN": sqn,
-        "WinRate_%": win_rate,
-        "ProfitFactor": profit_factor,
-        "AvgTradePL": avg_trade_pl,
-        "trades_total":trades_total,
-        "Sortino": sortino
-    }
-
-    creategraph(ret, load_thresholds())
-
-    return ret
-'''
-
+ 
+# run_one("AAPL", "AdxBreakout","2005-01-01","2020-01-01",1000, 0.001, 0.01)
 def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_capital: float, commission: float, slippage: float,
             ) -> Dict[str, Any]:
     
@@ -622,11 +452,11 @@ def _price_df_for(symbol: str) -> pd.DataFrame:
 def main():
     rows: List[Dict[str, Any]] = []
     
-    for symbol in SYMBOLS:
+    '''for symbol in SYMBOLS:#useless
         print(f"▶ {symbol}")
         for strat_cls in STRATEGIES:
             print(f"    ▶ {strat_cls.__name__}")
-            row = run_one(symbol, strat_cls)
+            row = run_one("AAPL", "AdxBreakout","2005-01-01","2020-01-01",1000, 0.001, 0.01)
             
             rows.append(row)
 
@@ -634,8 +464,11 @@ def main():
     df.to_csv(CSV_PATH, index=False)
     df.to_csv("output/results.csv", index=False)
     print("\nSaved results to", CSV_PATH)
-    print(df.head())
+    print(df.head())'''
+    strat = retall()[0]
+    row = run_one("AAPL", strat,"2005-01-01","2020-01-01",1000, 0.001, 0.01)
+    print(row)
 
-#if __name__ == "__main__":
-#    main()
+if __name__ == "__main__":
+    main()
 

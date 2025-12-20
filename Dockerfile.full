@@ -1,25 +1,30 @@
-# fintech-portfolio/Dockerfile.full
-FROM python:3.11-slim
-
-# Install system deps if needed (optional, usually fine without)
-# RUN apt-get update && apt-get install -y --no-install-recommends \
-#     && rm -rf /var/lib/apt/lists/*
+# fintech-portfolio/Dockerfile.full (Alpine, no BuildKit)
+FROM python:3.11-alpine
 
 WORKDIR /app
 
-# --- Install backend dependencies ---
-COPY BE/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    MPLBACKEND=Agg \
+    PYTHONPATH=/app/BE
 
-# --- Copy backend and frontend code ---
-COPY BE ./BE
-COPY FE ./FE
+# Build deps for common wheels on Alpine
+RUN apk add --no-cache \
+    build-base \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev
 
-ENV PYTHONUNBUFFERED=1 MPLBACKEND=Agg PYTHONPATH=/app/BE
+# 1) Copy ONLY requirements first (so this layer is cached)
+COPY BE/requirements.txt /app/BE/requirements.txt
 
+# 2) Install deps (re-runs only if requirements.txt changes)
+RUN pip install --no-cache-dir -r /app/BE/requirements.txt
 
-# Expose the port FastAPI will listen on
+# 3) Copy the rest of the project last
+COPY BE /app/BE
+COPY FE /app/FE
+
 EXPOSE 8080
-
-# Run the FastAPI app in BE/app.py
 CMD ["uvicorn", "BE.app:app", "--host", "0.0.0.0", "--port", "8080"]

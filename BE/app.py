@@ -591,6 +591,7 @@ def api_backtest(req: BacktestRequest):
     
 
     try:
+        print("trying to run backtest.run_one()")
         result = backtester.run_one(
             req.symbol,
             StratCls,
