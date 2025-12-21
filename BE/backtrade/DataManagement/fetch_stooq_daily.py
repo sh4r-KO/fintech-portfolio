@@ -5,6 +5,7 @@ from pathlib import Path
 import yfinance as yf
 import pandas_datareader.data as web
 
+import pandas as pd
 
 def import_stooq(symbols: Optional[Iterable[str]] = None) -> List[pathlib.Path]:
     """
