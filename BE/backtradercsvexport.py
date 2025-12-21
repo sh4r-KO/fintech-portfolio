@@ -69,14 +69,11 @@ ROOT = Path(__file__).parent
 DATA_DIRS = [
     ROOT / "backtrade" / "DataManagement" / "data" / "alpha",
     ROOT / "backtrade" / "DataManagement" / "data" / "stooq",
-
-    # also support the paths your log shows:
     ROOT / "DataManagement" / "data" / "alpha",
     ROOT / "DataManagement" / "data" / "stooq",
 ]
 
-from pathlib import Path
-ROOT = Path(__file__).parent
+
 GRAPHS_DIR = ROOT / "backtrade" / "output" / "graphs"
 #PRETTY_DIR = ROOT / "backtrade" / "output" / "pretty"
 GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
@@ -100,12 +97,14 @@ def make_feed(symbol: str,
     start_dt = datetime.fromisoformat(start) if start else None
     end_dt   = datetime.fromisoformat(end)   if end   else None
 
-    cand = _find_local_csv(symbol, DATA_DIRS)
+    cand = _find_local_csv(symbol, DATA_DIRS)#checking the folders for the data of the ticker
+    print("[debugg]: make_feed(av) : cand = ",cand)
+
     if cand:
         tf   = bt.TimeFrame.Minutes if "_m" in cand.stem else bt.TimeFrame.Days
         comp = int(cand.stem.split("_")[-1][:-1]) if "_m" in cand.stem else 1
         fmt  = "%Y-%m-%d %H:%M:%S" if tf is bt.TimeFrame.Minutes else "%Y-%m-%d"
-        print("using local file:", cand)
+        print("[INFO] backtradercsvexport.make_feed : using local file:", cand)
         return bt.feeds.GenericCSVData(
             dataname     = str(cand),
             dtformat     = fmt,
@@ -116,11 +115,13 @@ def make_feed(symbol: str,
             fromdate     = start_dt,
             todate       = end_dt,
         )
-
+    #if the tickers isnt there, we try to download it using AV
     # one-time try to populate local store
+    print("[INFO] backtradercsvexport.make_feed : couldnt use any local file using AV to download data")
+
     if symbol not in DOWNLOADED_ONCE:
         try:
-            av_doawnloader_main(CONFIG_FILE)
+            av_doawnloader_main(CONFIG_FILE)#the av downloader SHOULDNT be using a yaml for parameters?#TODO fix this
             import_stooq([symbol])
         except Exception as err:
             print(f"[warn] backtradercsvexport.make_feed : local data fetchers failed for {symbol}: {err}")
@@ -128,11 +129,12 @@ def make_feed(symbol: str,
             DOWNLOADED_ONCE.add(symbol)
 
         cand = _find_local_csv(symbol, DATA_DIRS)
+        print("[debugg]: make_feed(stooq) : cand = ",cand)
         if cand:
             tf   = bt.TimeFrame.Minutes if "_m" in cand.stem else bt.TimeFrame.Days
             comp = int(cand.stem.split("_")[-1][:-1]) if "_m" in cand.stem else 1
             fmt  = "%Y-%m-%d %H:%M:%S" if tf is bt.TimeFrame.Minutes else "%Y-%m-%d"
-            print("backtradercsvexport.make_feed : using local file after fetch:", cand)
+            print("backtradercsvexport.make_feed : using local file, after AV download:", cand)
             return bt.feeds.GenericCSVData(
                 dataname     = str(cand),
                 dtformat     = fmt,
@@ -143,6 +145,7 @@ def make_feed(symbol: str,
                 fromdate     = start_dt,
                 todate       = end_dt,
             )
+        print(f"[ERR] backtradercsvexport.make_feed : no data was found for {symbol}. make_feed return None")
 
 '''    # fallback: yfinance (dates applied here too)
     ysym = symbol.replace(".", "-").upper()

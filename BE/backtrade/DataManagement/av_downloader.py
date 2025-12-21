@@ -157,28 +157,31 @@ def save_rows(path: Path, rows: list[list[str]]):
 # Main
 # ---------------------------------------------------------------------------
 
-
 def av_doawnloader_main(configFile: str):
+
+
+    from pathlib import Path
+    ROOT = Path(__file__).parent
+
+    out = pathlib.Path(ROOT / "backtrade" / "DataManagement" / "data" / "alpha")
+
+
     ap = argparse.ArgumentParser(description="Download Alpha Vantage CSVs for Backtrader")
     ap.add_argument("-c", "--config", default=configFile, help="YAML config (default: config.yaml)")
-    ap.add_argument("-o", "--outdir", default="DataManagement/data/alpha", help="Output dir (default: DataManagement/data/alpha)")
+    ap.add_argument("-o", "--outdir", default=out, help="Output dir (default: ROOT/backtrade /DataManagement/data/alpha)")
     ap.add_argument("--intraday", type=int, choices=[1, 5, 15, 30, 60], help="Interval in minutes (skip for daily)")
     opts = ap.parse_args(args=[])
 
     api_key = os.getenv("AV_KEY") or os.getenv("ALPHAVANTAGE_API_KEY")
-
-
-    if not api_key:
-        sys.exit("Set AV_KEY environment variable with your Alpha Vantage API key.")
+    if not api_key: sys.exit("Set AV_KEY environment variable with your Alpha Vantage API key.")
 
     symbols = parse_yaml_symbols(opts.config)
-    if not symbols:
-        sys.exit("No symbols found in YAML.")
+    if not symbols: sys.exit("No symbols found in YAML.")
 
     outdir = Path(opts.outdir)
     intrv = opts.intraday
 
-    print(f"[INFO] av_doawnloader.av_doawnloader_main : Fetching {len(symbols)} symbol(s) from Alpha Vantage …")
+    print(f"[INFO] av_doawnloader.av_doawnloader_main : attempting to fetch {symbols} symbol(s) from Alpha Vantage …")
 
     for idx, sym in enumerate(symbols, 1):
         try:
@@ -205,5 +208,5 @@ def av_doawnloader_main(configFile: str):
     print("[INFO] av_doawnloader.av_doawnloader_main : Done.  You can now point backtrader_yaml_runner at the new CSVs.")
 
 
-if __name__ == "__main__":
-    av_doawnloader_main("config.yaml")
+#if __name__ == "__main__":
+    #av_doawnloader_main("config.yaml")
