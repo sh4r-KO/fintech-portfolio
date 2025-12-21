@@ -572,26 +572,32 @@ def api_strategies():
 
 from fastapi import HTTPException
 
+import os
+import importlib
+import traceback
+from fastapi import HTTPException
+
 @app.post("/api/backtest")
 def api_backtest(req: BacktestRequest):
     print(f"[/api/backtest] symbol={req.symbol} strategy={req.strategy}")
-    
+
     try:
         backtester = importlib.import_module("backtradercsvexport")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Import backtester failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Import backtester failed: {type(e).__name__}: {e}")
+
     try:
         StratCls = _resolve_strategy(req.strategy)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"_resolve_strategy(req.strategy) failed: {e}")
+        raise HTTPException(status_code=400, detail=f"_resolve_strategy failed: {type(e).__name__}: {e}")
+
     try:
         _clear_plots()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"_clear_plots() failed: {e}")
-    
+        raise HTTPException(status_code=500, detail=f"_clear_plots failed: {type(e).__name__}: {e}")
 
     try:
-        print("trying to run backtest.run_one()")
+        print("trying to run backtester.run_one()")
         result = backtester.run_one(
             req.symbol,
             StratCls,
@@ -602,34 +608,41 @@ def api_backtest(req: BacktestRequest):
             slippage=req.slippage,
         )
         if not result:
-            raise HTTPException(status_code=502,detail="No data feed returned (make_feed returned None). Check date range / MINBARS / data files.")
+            raise HTTPException(
+                status_code=502,
+                detail="No result returned. Likely no data feed (make_feed=None) or zero bars in date range."
+            )
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Backtest failed: {e}. cant run_one")
 
-    # names produced by your gauge code
+    except Exception as e:
+        # Minimal extra context: exception type + where it blew up
+        tb = traceback.extract_tb(e.__traceback__)
+        last = tb[-1] if tb else None
+        where = f"{os.path.basename(last.filename)}:{last.lineno} in {last.name}" if last else "unknown location"
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Backtest failed ({type(e).__name__}) at {where}: {e}"
+        )
+
     png_names = [
-    "Calmar.png","MaxDrawdown_%.png","ProfitFactor.png","rnorm100_%.png",
-    "SharpeAnnual.png","SharpeDaily.png","Sortino.png","SQN.png",
-    "TimeDD_bars.png","TotalReturn_%.png","VWR.png","WinRate_%.png"
+        "Calmar.png","MaxDrawdown_%.png","ProfitFactor.png","rnorm100_%.png",
+        "SharpeAnnual.png","SharpeDaily.png","Sortino.png","SQN.png",
+        "TimeDD_bars.png","TotalReturn_%.png","VWR.png","WinRate_%.png"
     ]
     charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
-    #pp = f"/pretty/{req.symbol}_{req.strategy}.png"
+
     plot_name = f"{req.symbol}_{req.strategy}.png"
     plot_path = GRAPHS_DIR / plot_name
     plot_url  = f"/graphs/{plot_name}" if plot_path.exists() else None
 
-    charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
     if plot_url:
         charts.append(plot_url)
 
     return {"ok": True, "metrics": result, "charts": charts, "plot": plot_url}
-    plot_path = GRAPHS_DIR / f"{req.symbol}_{req.strategy}.png"
-    plot_url  = f"/graphs/{req.symbol}_{req.strategy}.png" if plot_path.exists() else None
 
-    return {"ok": True, "metrics": result, "charts": charts, "plot": plot_url}
     
 
 

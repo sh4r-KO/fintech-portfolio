@@ -100,7 +100,7 @@ def make_feed(symbol: str,
     cand = _find_local_csv(symbol, DATA_DIRS)#checking the folders for the data of the ticker
     print("[debugg]: make_feed(av) : cand = ",cand)
 
-    if cand:
+    if cand!= None:
         tf   = bt.TimeFrame.Minutes if "_m" in cand.stem else bt.TimeFrame.Days
         comp = int(cand.stem.split("_")[-1][:-1]) if "_m" in cand.stem else 1
         fmt  = "%Y-%m-%d %H:%M:%S" if tf is bt.TimeFrame.Minutes else "%Y-%m-%d"
@@ -130,7 +130,7 @@ def make_feed(symbol: str,
 
         cand = _find_local_csv(symbol, DATA_DIRS)
         print("[debugg]: make_feed(stooq) : cand = ",cand)
-        if cand:
+        if cand!= None:
             tf   = bt.TimeFrame.Minutes if "_m" in cand.stem else bt.TimeFrame.Days
             comp = int(cand.stem.split("_")[-1][:-1]) if "_m" in cand.stem else 1
             fmt  = "%Y-%m-%d %H:%M:%S" if tf is bt.TimeFrame.Minutes else "%Y-%m-%d"
@@ -461,22 +461,8 @@ def _price_df_for(symbol: str) -> pd.DataFrame:
 
 def main():
     rows: List[Dict[str, Any]] = []
-    
-    '''for symbol in SYMBOLS:#useless
-        print(f"▶ {symbol}")
-        for strat_cls in STRATEGIES:
-            print(f"    ▶ {strat_cls.__name__}")
-            row = run_one("AAPL", "AdxBreakout","2005-01-01","2020-01-01",1000, 0.001, 0.01)
-            
-            rows.append(row)
-
-    df = pd.DataFrame(rows)
-    df.to_csv(CSV_PATH, index=False)
-    df.to_csv("output/results.csv", index=False)
-    print("\nSaved results to", CSV_PATH)
-    print(df.head())'''
     strat = retall()[0]
-    row = run_one("AAPL", strat,"2005-01-01","2020-01-01",1000, 0.001, 0.01)
+    row = run_one("PLTR", strat,"2005-01-01","2020-01-01",1000, 0.001, 0.01)
     print(row)
 
 if __name__ == "__main__":

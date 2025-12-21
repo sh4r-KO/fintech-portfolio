@@ -15,7 +15,7 @@ def import_stooq(symbols: Optional[Iterable[str]] = None) -> List[pathlib.Path]:
     from pathlib import Path
     ROOT = Path(__file__).parent
     
-    out = pathlib.Path(ROOT / "backtrade" / "DataManagement" / "data" / "stooq")
+    out = Path(ROOT / "data" / "stooq")#ROOT here is relative to the current file path
     #out.mkdir(parents=True, exist_ok=True)
 
     saved: List[pathlib.Path] = []

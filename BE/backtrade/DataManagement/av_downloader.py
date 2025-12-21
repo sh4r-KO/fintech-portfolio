@@ -163,7 +163,8 @@ def av_doawnloader_main(configFile: str):
     from pathlib import Path
     ROOT = Path(__file__).parent
 
-    out = pathlib.Path(ROOT / "backtrade" / "DataManagement" / "data" / "alpha")
+    out = Path(ROOT / "data" / "alpha")#ROOT here is relative to the current file path
+
 
 
     ap = argparse.ArgumentParser(description="Download Alpha Vantage CSVs for Backtrader")
