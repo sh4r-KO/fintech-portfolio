@@ -69,8 +69,8 @@ ROOT = Path(__file__).parent
 DATA_DIRS = [
     ROOT / "backtrade" / "DataManagement" / "data" / "alpha",
     ROOT / "backtrade" / "DataManagement" / "data" / "stooq",
-    ROOT / "DataManagement" / "data" / "alpha",
-    ROOT / "DataManagement" / "data" / "stooq",
+    #ROOT / "DataManagement" / "data" / "alpha",
+    #ROOT / "DataManagement" / "data" / "stooq",
 ]
 
 
@@ -133,7 +133,7 @@ def make_feed(symbol: str,
         try:
             #av_doawnloader_main(CONFIG_FILE)#the av downloader SHOULDNT be using a yaml for parameters?#TODO fix this
             #import_stooq([symbol])
-            import_yahoo([symbol])
+            import_yahoo([symbol],start,end)
             
         except Exception as err:
             print(f"[warn] backtradercsvexport.make_feed : local data fetchers failed for {symbol}: {err}")
@@ -484,7 +484,7 @@ def _price_df_for(symbol: str) -> pd.DataFrame:
 def main():
     rows: List[Dict[str, Any]] = []
     strat = retall()[0]
-    row = run_one("PLTR", strat,"2005-01-01","2020-01-01",1000, 0.001, 0.01)
+    row = run_one("GE", strat,"2005-01-01","2021-01-01",1000, 0.001, 0.01)
     print(row)
 
 if __name__ == "__main__":

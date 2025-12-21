@@ -36,23 +36,13 @@ def import_stooq(symbols: Optional[Iterable[str]] = None) -> List[pathlib.Path]:
 
 
 
-def import_yahoo(symbols: Optional[Iterable[str]] = None) -> List[pathlib.Path]:
-    """
-    Download daily history from Yahoo Finance for each symbol and save to
-    data/yahoo/<SYMBOL>.csv.
-
-    - Uses yfinance (no API key required)
-    - Downloads full available daily history
-    - Sorts oldest -> newest (Backtrader-friendly)
-    - Safe to call from an API server (no argv usage)
-    """
+def import_yahoo(symbols: Iterable[str], start, end) -> List[pathlib.Path]:
     if not symbols:
         return []
 
     syms = list(symbols)
-
     ROOT = Path(__file__).parent
-    out = ROOT / "data" / "yahoo"
+    out = ROOT / "data" / "stooq"   # (you may want "data/yahoo" instead)
     out.mkdir(parents=True, exist_ok=True)
 
     saved: List[pathlib.Path] = []
@@ -61,38 +51,51 @@ def import_yahoo(symbols: Optional[Iterable[str]] = None) -> List[pathlib.Path]:
         try:
             df = yf.download(
                 s,
-                period="max",        # full history Yahoo has
+                start=start,
+                end=end,
                 interval="1d",
                 auto_adjust=False,
                 progress=False,
                 threads=False,
+                group_by="column",   # helps keep columns as OHLCV
             )
 
-            if df.empty:
+            if df is None or df.empty:
                 print(f"[WARN] Yahoo returned no data for {s}")
                 continue
 
-            # Normalize column names to Backtrader expectations
+            # ---- FIX 1: flatten MultiIndex columns if present ----
+            if isinstance(df.columns, pd.MultiIndex):
+                # For yfinance, the first level is usually 'Price'/'Open' etc.
+                # We want the OHLCV names only.
+                df.columns = df.columns.get_level_values(0)
+
+            # ---- FIX 2: normalize exactly to Backtrader CSV shape ----
             df = df.rename(columns=str.title)
-
-            # Ensure DatetimeIndex, sorted ascending
-            df.index.name = "Date"
             df = df.sort_index()
+            df.index = df.index.tz_localize(None) if getattr(df.index, "tz", None) else df.index
 
-            # Keep only OHLCV (Yahoo sometimes adds extras)
-            df = df[["Open", "High", "Low", "Close", "Volume"]]
+            # Keep only OHLCV (and ensure they exist)
+            need = ["Open", "High", "Low", "Close", "Volume"]
+            missing = [c for c in need if c not in df.columns]
+            if missing:
+                print(f"[ERR] Missing columns for {s}: {missing}. Got: {list(df.columns)}")
+                continue
 
+            out_df = df[need].copy()
+            out_df.index.name = "Date"
+
+            # ---- FIX 3: write Date as first column, no MultiIndex header rows ----
             p = out / f"{s}.csv"
-            df.to_csv(p)
+            out_df.reset_index().to_csv(p, index=False)
 
-            print(f"Saved {s}  →  {p}  ({len(df)} rows)")
+            print(f"Saved {s}  →  {p}  ({len(out_df)} rows)")
             saved.append(p)
 
         except Exception as e:
             print(f"[ERR] Yahoo download failed for {s}: {e}")
 
     return saved
-
 
 
 if __name__ == "__main__":

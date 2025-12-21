@@ -13,7 +13,7 @@ PyYAML==6.0.2
 
 # --- Finance / market data ---
 backtrader==1.9.78.123
-yfinance==0.2.54        # >=0.2.41 strongly recommended (timezone fixes)
+yfinance==0.2.58        # >=0.2.41 strongly recommended (timezone fixes)
 pandas-datareader==0.10.0
 yahooquery==2.3.7
 

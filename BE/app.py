@@ -710,7 +710,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 ROOT_DIR = APP_DIR.parent          # .../fintech-portfolio
-FE_DIR = ROOT_DIR / "FE"           # .../fintech-portfolio/FE
+FE_DIR = ROOT_DIR / "FE"           # .../fintech-portfolio/FE#TODO this hsouldnt be accessible from here???(where app.py currently is)
 
 if FE_DIR.exists():
     # Serve all FE files (html, css, js, images) under "/"
