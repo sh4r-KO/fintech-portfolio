@@ -61,10 +61,10 @@ def load_slippage(yaml_path: str | Path = "config.yaml") -> float:
     cfg = _load_cfg(yaml_path)
     return float(cfg.get("slippage", 0.0005))
 
-def load_output_csv(yaml_path: str | Path = "config.yaml") -> str:
-    """Return the CSV filename for results."""
-    cfg = _load_cfg(yaml_path)
-    return str(cfg.get("output_csv", "results.csv"))
+#def load_output_csv(yaml_path: str | Path = "config.yaml") -> str:
+#    """Return the CSV filename for results."""
+#    cfg = _load_cfg(yaml_path)
+#    return str(cfg.get("output_csv", "results.csv"))
 
 
 def load_strats(yaml_path: str | Path = "config.yaml") -> list[type]:
@@ -130,7 +130,7 @@ def filter_available(tickers: list[str]) -> list[str]:
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent   # /app/BE
-thresholds_path = BASE_DIR / "backtrade" / "DataManagement" / "data" / "PowerBi" / "Indicator_Target_Thresholds.csv"
+thresholds_path = BASE_DIR / "others" / "Indicator_Target_Thresholds.csv"
 
 def load_thresholds(path=thresholds_path) -> dict:
     df = pd.read_csv(path)

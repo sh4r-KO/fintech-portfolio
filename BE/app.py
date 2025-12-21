@@ -16,7 +16,7 @@ from fastapi.responses import StreamingResponse
 
 
 APP_DIR = Path(__file__).parent
-DATA_PATH = APP_DIR / "data" / "projects.json"
+DATA_PATH = APP_DIR / "others" / "projects.json"
 
 app = FastAPI(title="Fintech Portfolio API", version="1.0.0")
 

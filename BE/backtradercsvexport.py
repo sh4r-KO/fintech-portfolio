@@ -35,8 +35,8 @@ from typing import Dict, Any, List
 import math
 import numpy as np
 from pathlib import Path
-from backtrade.DataManagement.av_downloader import av_doawnloader_main
-from backtrade.DataManagement.fetch_stooq_daily import import_stooq, import_yahoo
+from backtrade.DataManagement.dataFetchers import av_doawnloader_main
+from backtrade.DataManagement.dataFetchers import import_stooq, import_yahoo
 
 from datetime import datetime
 
@@ -58,8 +58,8 @@ SYMBOLS = load_symbols(CONFIG_FILE)
 STRATEGIES = retall()
 STRATEGIES = load_strats(CONFIG_FILE)
 
-CSV_PATH = "results.csv"
-CSV_PATH = load_output_csv(CONFIG_FILE)
+#CSV_PATH = "results.csv"
+#CSV_PATH = load_output_csv(CONFIG_FILE)
 
 MINBARS = 80 #252 before when the fremim of AV was better
 
@@ -67,10 +67,7 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 
 DATA_DIRS = [
-    ROOT / "backtrade" / "DataManagement" / "data" / "alpha",
-    ROOT / "backtrade" / "DataManagement" / "data" / "stooq",
-    #ROOT / "DataManagement" / "data" / "alpha",
-    #ROOT / "DataManagement" / "data" / "stooq",
+    ROOT / "backtrade" / "DataManagement" / "data" ,
 ]
 
 
@@ -127,7 +124,7 @@ def make_feed(symbol: str,
         )
     #if the tickers isnt there, we try to download it using AV
     # one-time try to populate local store
-    print("[INFO] backtradercsvexport.make_feed : couldnt use any local file using AV to download data")
+    print("[INFO] backtradercsvexport.make_feed : couldnt use any local file using yahoo to download data")
 
     if symbol not in DOWNLOADED_ONCE:
         try:
@@ -156,7 +153,7 @@ def make_feed(symbol: str,
                         f"{file_min.date()}→{file_max.date()} ({cand}). Returning None."
                     )
                     return None
-            print("backtradercsvexport.make_feed : using local file, after AV download:", cand)
+            print("backtradercsvexport.make_feed : using local file, after yahoo download:", cand)
             return bt.feeds.GenericCSVData(
                 dataname     = str(cand),
                 dtformat     = fmt,
@@ -416,7 +413,7 @@ def creategraph(row: dict, thresholds: dict) -> None:
         # Match thresholds row
         th = thresholds.get(metric_name.replace("_%", "").replace("_", " "), None)
         if th is None:
-            print(f"No thresholds for {metric_name}, skipping")
+            print(f"[WARN]backtradercsvexport.creategraph : No thresholds for {metric_name}, skipping")
             continue
 
         vmin = th["min"]
