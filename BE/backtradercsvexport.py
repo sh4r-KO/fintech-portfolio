@@ -36,13 +36,13 @@ import math
 import numpy as np
 from pathlib import Path
 from backtrade.DataManagement.av_downloader import av_doawnloader_main
-from backtrade.DataManagement.fetch_stooq_daily import import_stooq
+from backtrade.DataManagement.fetch_stooq_daily import import_stooq, import_yahoo
 
 from datetime import datetime
 
 from strats import *
 from myTools import *
-from myTools import _find_local_csv
+from myTools import _find_local_csv, _csv_date_bounds
 
 import mplfinance as mpf
 
@@ -104,6 +104,16 @@ def make_feed(symbol: str,
         tf   = bt.TimeFrame.Minutes if "_m" in cand.stem else bt.TimeFrame.Days
         comp = int(cand.stem.split("_")[-1][:-1]) if "_m" in cand.stem else 1
         fmt  = "%Y-%m-%d %H:%M:%S" if tf is bt.TimeFrame.Minutes else "%Y-%m-%d"
+        file_min, file_max = _csv_date_bounds(cand, fmt)
+        if file_min and file_max and start_dt and end_dt:
+            # no overlap if requested window is entirely before or after file window
+            if end_dt < file_min or start_dt > file_max:
+                print(
+                    f"[ERR] make_feed: date range mismatch for {symbol}. "
+                    f"Requested {start_dt.date()}→{end_dt.date()} but file has "
+                    f"{file_min.date()}→{file_max.date()} ({cand}). Returning None."
+                )
+                return None
         print("[INFO] backtradercsvexport.make_feed : using local file:", cand)
         return bt.feeds.GenericCSVData(
             dataname     = str(cand),
@@ -121,8 +131,10 @@ def make_feed(symbol: str,
 
     if symbol not in DOWNLOADED_ONCE:
         try:
-            av_doawnloader_main(CONFIG_FILE)#the av downloader SHOULDNT be using a yaml for parameters?#TODO fix this
-            import_stooq([symbol])
+            #av_doawnloader_main(CONFIG_FILE)#the av downloader SHOULDNT be using a yaml for parameters?#TODO fix this
+            #import_stooq([symbol])
+            import_yahoo([symbol])
+            
         except Exception as err:
             print(f"[warn] backtradercsvexport.make_feed : local data fetchers failed for {symbol}: {err}")
         finally:
@@ -134,6 +146,16 @@ def make_feed(symbol: str,
             tf   = bt.TimeFrame.Minutes if "_m" in cand.stem else bt.TimeFrame.Days
             comp = int(cand.stem.split("_")[-1][:-1]) if "_m" in cand.stem else 1
             fmt  = "%Y-%m-%d %H:%M:%S" if tf is bt.TimeFrame.Minutes else "%Y-%m-%d"
+            file_min, file_max = _csv_date_bounds(cand, fmt)
+            if file_min and file_max and start_dt and end_dt:
+                # no overlap if requested window is entirely before or after file window
+                if end_dt < file_min or start_dt > file_max:
+                    print(
+                        f"[ERR] make_feed: date range mismatch for {symbol}. "
+                        f"Requested {start_dt.date()}→{end_dt.date()} but file has "
+                        f"{file_min.date()}→{file_max.date()} ({cand}). Returning None."
+                    )
+                    return None
             print("backtradercsvexport.make_feed : using local file, after AV download:", cand)
             return bt.feeds.GenericCSVData(
                 dataname     = str(cand),
@@ -202,7 +224,7 @@ def _extract_tdrawdown(r: Any) -> float:
 def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_capital: float, commission: float, slippage: float,
             ) -> Dict[str, Any]:
     
-    cerebro = bt.Cerebro(stdstats=True)
+    cerebro = bt.Cerebro(stdstats=True, runonce=False)
     cerebro.broker.setcash(starting_capital)
     cerebro.broker.setcommission(commission=commission)
     cerebro.broker.set_slippage_perc(perc=slippage, slip_open=True, slip_limit=True, slip_match=True, slip_out=False)

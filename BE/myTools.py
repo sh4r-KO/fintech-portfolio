@@ -10,6 +10,8 @@ import pandas as pd
 import mplfinance as mpf
 import yfinance as yf
 from datetime import date, timedelta
+from datetime import datetime
+
 # ────────────────────────────────────────────────────────────────
 # 1. Symbols (already finished in your file)
 # ────────────────────────────────────────────────────────────────
@@ -255,3 +257,39 @@ def main():
 
 
     
+def _csv_date_bounds(path: Path, dtformat: str) -> tuple[datetime | None, datetime | None]:
+    """
+    Return (min_dt, max_dt) found in the CSV's first column.
+    Works even if the file is reverse-sorted (newest->oldest).
+    Assumes first column is Date/Datetime and may have a header row.
+    """
+    min_dt = None
+    max_dt = None
+    import csv
+
+    with open(path, "r", encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if not row:
+                continue
+
+            s = row[0].strip()
+            if not s:
+                continue
+
+            # Skip header rows like "Date"
+            if s.lower() in ("date", "datetime", "timestamp", "time"):
+                continue
+
+            try:
+                dt = datetime.strptime(s[:19], dtformat)  # [:19] covers intraday too
+            except Exception:
+                # If any weird line appears, just skip it
+                continue
+
+            if min_dt is None or dt < min_dt:
+                min_dt = dt
+            if max_dt is None or dt > max_dt:
+                max_dt = dt
+
+    return min_dt, max_dt
