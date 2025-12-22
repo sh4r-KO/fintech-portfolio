@@ -1,18 +1,36 @@
 from fastapi import FastAPI, HTTPException,Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr,Field
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
+
+from pydantic import BaseModel, EmailStr,Field, ConfigDict
 from typing import List, Optional
 from pathlib import Path
 import json
 
-from fastapi import HTTPException
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-from pathlib import Path
 import importlib
-import io
 import matplotlib.pyplot as plt
-from fastapi.responses import StreamingResponse
+
+import httpx
+
+import os, io, json, math
+from datetime import date, timedelta, datetime
+
+import time
+from typing import Dict, Tuple, Any
+
+
+from fastapi.responses import JSONResponse
+from starlette.requests import Request
+
+
+import traceback
+
+# app.py
+from fastapi.responses import FileResponse
+from hashlib import md5
+import mimetypes
+
 
 
 APP_DIR = Path(__file__).parent
@@ -106,7 +124,6 @@ app.add_middleware(
 
 # --- Compound Interest API ---
 
-from pydantic import Field
 
 
 class CompoundInput(BaseModel):
@@ -238,11 +255,6 @@ def compound_plot(payload: CompoundInput):
 
 # --- FX Converter API ---
 
-from datetime import date, timedelta
-import io, math
-import httpx
-import matplotlib.pyplot as plt
-from fastapi.responses import StreamingResponse
 
 FX_CURRENCIES = ["USD","EUR","GBP","JPY","AUD","CAD","CHF","CNY","SEK","NZD","MXN",
                  "SGD","HKD","NOK","KRW","TRY","INR","BRL","ZAR","AED","SAR","PLN",
@@ -364,13 +376,9 @@ async def fx_plot(payload: FXInput):
     plt.close(fig); buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
 # --- Stocks (Alpha Vantage: Monthly Adjusted) ---
-import os, io, json, math
-from datetime import date, timedelta, datetime
-import httpx
-import matplotlib.pyplot as plt
 
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+
+
 
 ALPHA_KEY = os.getenv("ALPHAVANTAGE_API_KEY")  # set this in Cloud Run/env
 class StockInput(BaseModel):
@@ -436,8 +444,7 @@ def _parse_alpha_series(js):
         raise HTTPException(status_code=502, detail="Alpha Vantage returned too few rows.")
     return dates, closes
 
-import time
-from typing import Dict, Tuple, Any
+
 
 _ALPHA_CACHE: Dict[str, Tuple[float, Any]] = {}
 _ALPHA_TTL_SECONDS = 60  # 1 minute
@@ -517,21 +524,8 @@ async def stocks_plot(payload: StockInput):
     plt.close(fig); buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
 
-from fastapi import HTTPException
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-from pathlib import Path
-
-# app.py (top-level, near other imports)
-from fastapi.staticfiles import StaticFiles
-from pathlib import Path
 
 
-
-from pathlib import Path
-from fastapi.staticfiles import StaticFiles
-
-# mêmes dossiers que ci-dessus
 APP_DIR = Path(__file__).parent
 GRAPHS_DIR = APP_DIR / "backtrade" / "output" / "graphs"
 GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
@@ -539,8 +533,7 @@ GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
+
 
 class BacktestRequest(BaseModel):
     # Explicitly allow extra keys to be ignored
@@ -570,12 +563,7 @@ def api_strategies():
     mod = importlib.import_module("strats")
     return {"items": [cls.__name__ for cls in mod.retall()]}
 
-from fastapi import HTTPException
 
-import os
-import importlib
-import traceback
-from fastapi import HTTPException
 
 @app.post("/api/backtest")
 def api_backtest(req: BacktestRequest):
@@ -648,8 +636,7 @@ def api_backtest(req: BacktestRequest):
 
 
 
-from fastapi.responses import JSONResponse
-from starlette.requests import Request
+
 
 @app.exception_handler(Exception)
 async def unhandled_exceptions(_: Request, exc: Exception):
@@ -675,12 +662,7 @@ def _clear_plots():
 
 
 
-# app.py
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
-from pathlib import Path
-from hashlib import md5
-import mimetypes
+
 
 
 
@@ -706,8 +688,7 @@ def get_graph(name: str):
         headers=_nocache_headers(f),
     )
 
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+
 
 ROOT_DIR = APP_DIR.parent          # .../fintech-portfolio
 FE_DIR = ROOT_DIR / "FE"           # .../fintech-portfolio/FE#TODO this hsouldnt be accessible from here???(where app.py currently is)
