@@ -1,25 +1,7 @@
-"""
-backtrader_csv_export.py — batch‑test several strategies and export a CSV summary
--------------------------------------------------------------------------------
-This script iterates over a list of symbols *and* a list of strategies, runs
-Backtrader on each pair, collects a handful of key performance statistics, and
-finally saves everything to **resulta.csv** (in the current working directory).
-
-Run it as a normal Python script:
-    $ python backtrader_csv_export.py
-The code will download historical daily data via *yfinance* (make sure you have
-an internet connection the first time) and will take a couple of minutes,
-depending on the time‑range and strategy count.
-
-Dependencies (same as the original script):
-    (-m) pip install backtrader yfinance pandas matplotlib yaml mplfinance
-
-"""
 
 from __future__ import annotations
 
 import os
-
 
 os.environ["MPLBACKEND"] = "Agg"  # must be set before pyplot is imported
 import matplotlib
@@ -58,25 +40,19 @@ SYMBOLS = load_symbols(CONFIG_FILE)
 STRATEGIES = retall()
 STRATEGIES = load_strats(CONFIG_FILE)
 
-#CSV_PATH = "results.csv"
-#CSV_PATH = load_output_csv(CONFIG_FILE)
-
 MINBARS = 80 #252 before when the fremim of AV was better
 
 from pathlib import Path
 ROOT = Path(__file__).parent
 
 DATA_DIRS = [
-    ROOT / "backtrade" / "DataManagement" / "data" ,
+    ROOT / "backtrade" / "DataManagement" / "data" ,# folder for any ticker CSVs
 ]
 
 
 GRAPHS_DIR = ROOT / "backtrade" / "output" / "graphs"
-#PRETTY_DIR = ROOT / "backtrade" / "output" / "pretty"
 GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
-#PRETTY_DIR.mkdir(parents=True, exist_ok=True)
 
-# ────────────────────────── HELPER FUNCTIONS ──────────────────────────
 DOWNLOADED_ONCE: set[str] = set()   # symbols we already tried to fetch locally
 
 
@@ -87,14 +63,30 @@ def make_feed(symbol: str,
               end: str | None = None,
               auto_adjust: bool = False) -> bt.feeds.PandasData | None:
     """
-    1) Try local CSVs (DataManagement/data/*) with fromdate/todate.
-    2) Else download via yfinance using start/end.
+    Create a Backtrader data feed for the given symbol and date range.
+    Uses local CSV files if available; else tries to download via yfinance.
+    The CSV files must be in Backtrader-compatible format.
+    Each CSV must cover at least the requested date range.
+    date strings are in ISO format: "YYYY-MM-DD".
+
+
+    :param symbol: The stock symbol to fetch data for.
+    :type symbol: str
+    :param start: The start date for the data range (ISO format).
+    :type start: str | None
+    :param end: The end date for the data range (ISO format).
+    :type end: str | None
+    :param auto_adjust: Whether to auto-adjust prices.
+    :type auto_adjust: bool
+    :return:A Backtrader PandasData feed or None if data not found.
+    :rtype: PandasData | None
     """
+
     # normalize dates
     start_dt = datetime.fromisoformat(start) if start else None
     end_dt   = datetime.fromisoformat(end)   if end   else None
 
-    cand = _find_local_csv(symbol, DATA_DIRS)#checking the folders for the data of the ticker
+    cand = _find_local_csv(symbol, DATA_DIRS) #checking the folders for the data of the ticker
     print("[debugg]: make_feed(av) : cand = ",cand)
 
     if cand!= None:
@@ -166,38 +158,11 @@ def make_feed(symbol: str,
             )
         print(f"[ERR] backtradercsvexport.make_feed : no data was found for {symbol}. make_feed return None")
 
-'''    # fallback: yfinance (dates applied here too)
-    ysym = symbol.replace(".", "-").upper()
-    try:
-        df = yf.download(
-            ysym,
-            start=start,       # strings are fine for yfinance
-            end=end,
-            progress=False,
-            threads=False,
-            auto_adjust=auto_adjust
-        )
-    except Exception as err:
-        print(f"[skip] backtradercsvexport.make_feed : {symbol}: yfinance error → {err}")
-        return None
 
-    if df.empty:
-        print(f"[skip] backtradercsvexport.make_feed : {symbol}: no data from Yahoo")
-        return None
-    elif len(df) < MINBARS:
-        print(f"[skip] backtradercsvexport.make_feed : {symbol}: only {len(df)} bars (< {MINBARS})")
-        return None
-
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-    df.columns = [c.title() for c in df.columns]
-    print("backtradercsvexport.make_feed : used yfinance for:", symbol)
-    return bt.feeds.PandasData(dataname=df)'''
 
 
 def _safe_add(cerebro: bt.Cerebro, ancls, alias: str | None = None, **kwargs):
-    """Attach an analyzer if available / if the current Backtrader build
-    supports the given kwargs. Silently skip otherwise."""
+    """Attach an analyzer if available / if the current Backtrader build supports the given kwargs. Silently skip otherwise."""
     try:
         cerebro.addanalyzer(ancls, _name=alias or ancls.__name__.lower(), **kwargs)
     except Exception as err:
@@ -220,6 +185,63 @@ def _extract_tdrawdown(r: Any) -> float:
 # run_one("AAPL", "AdxBreakout","2005-01-01","2020-01-01",1000, 0.001, 0.01)
 def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_capital: float, commission: float, slippage: float,
             ) -> Dict[str, Any]:
+    
+
+    """
+    Run a backtest for a single symbol and strategy over the given date range. among other parameters
+    Returns a dictionary of performance metrics.
+    :param symbol: The stock symbol to backtest.
+    :type symbol: str
+    :param strat_cls: The Backtrader strategy class to use.
+    :type strat_cls: Type[bt.Strategy]
+    :param start_date: The start date for the backtest (ISO format).
+    :type start_date: str
+    :param end_date: The end date for the backtest (ISO format).
+    :type end_date: str
+    :param starting_capital: The starting capital for the backtest.
+    :type starting_capital: float
+    :param commission: The commission rate (fraction) for trades.
+    :type commission: float
+    :param slippage: The slippage percentage (fraction) for trades.
+    :type slippage: float
+    :return: A dictionary of performance metrics.
+    :rtype: Dict[str, Any]
+    """
+    
+
+    #some helpers : 
+    class EntryExitMarks(bt.Analyzer):
+        """Record buy/sell moments based on position changes."""
+        def start(self):
+            self.prev_size = 0
+            self.recs = []  # list of tuples: ('buy'|'sell', datetime, price)
+        def next(self):
+            size = self.strategy.position.size
+            if size > 0 and self.prev_size <= 0:                # entry long
+                self.recs.append(('buy',  self.strategy.datetime.datetime(0), float(self.data.close[0])))
+            if size == 0 and self.prev_size != 0:               # flat out
+                self.recs.append(('sell', self.strategy.datetime.datetime(0), float(self.data.close[0])))
+            self.prev_size = size
+        def get_analysis(self):
+            return self.recs
+    def _price_df_for(symbol: str) -> pd.DataFrame:
+        """
+        Return a Pandas OHLCV DataFrame for mplfinance, regardless of data source.
+        Index is DatetimeIndex; columns: Open,High,Low,Close,Volume.
+        """
+        cand = _find_local_csv(symbol, DATA_DIRS)
+        if cand:
+            df = pd.read_csv(cand, parse_dates=['Date'])
+            df = df.rename(columns=str.title).set_index('Date')[['Open','High','Low','Close','Volume']]
+            return df.sort_index()
+
+        # fallback: yfinance (same as make_feed)
+        ysym = symbol.replace('.', '-').upper()
+        df = yf.download(ysym, start=load_startDate(), progress=False, threads=False, auto_adjust=False)
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+        df.columns = [c.title() for c in df.columns]
+        return df[['Open','High','Low','Close','Volume']].sort_index()
     
     cerebro = bt.Cerebro(stdstats=True, runonce=False)
     cerebro.broker.setcash(starting_capital)
@@ -394,6 +416,13 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
 
 
 def creategraph(row: dict, thresholds: dict) -> None:
+    """
+    Create and save gauge graphs for each metric in the row based on thresholds.
+
+    param row: A dictionary containing metric names and their values.
+    param thresholds: A dictionary containing threshold values for each metric.
+    """
+
     outdir = GRAPHS_DIR
 
     outdir.mkdir(exist_ok=True)
@@ -436,54 +465,21 @@ def creategraph(row: dict, thresholds: dict) -> None:
         plt.close(fig)
         print(f"Saved: {outfile}")
     
-    #other kpi than gauge : 
+
 
  # ────────────────────────── PLOTTING HELPERS ──────────────────────────
 
 
-class EntryExitMarks(bt.Analyzer):
-    """Record buy/sell moments based on position changes."""
-    def start(self):
-        self.prev_size = 0
-        self.recs = []  # list of tuples: ('buy'|'sell', datetime, price)
-    def next(self):
-        size = self.strategy.position.size
-        if size > 0 and self.prev_size <= 0:                # entry long
-            self.recs.append(('buy',  self.strategy.datetime.datetime(0), float(self.data.close[0])))
-        if size == 0 and self.prev_size != 0:               # flat out
-            self.recs.append(('sell', self.strategy.datetime.datetime(0), float(self.data.close[0])))
-        self.prev_size = size
-    def get_analysis(self):
-        return self.recs
 
 
-def _price_df_for(symbol: str) -> pd.DataFrame:
-    """
-    Return a Pandas OHLCV DataFrame for mplfinance, regardless of data source.
-    Index is DatetimeIndex; columns: Open,High,Low,Close,Volume.
-    """
-    cand = _find_local_csv(symbol, DATA_DIRS)
-    if cand:
-        df = pd.read_csv(cand, parse_dates=['Date'])
-        df = df.rename(columns=str.title).set_index('Date')[['Open','High','Low','Close','Volume']]
-        return df.sort_index()
 
-    # fallback: yfinance (same as make_feed)
-    ysym = symbol.replace('.', '-').upper()
-    df = yf.download(ysym, start=load_startDate(), progress=False, threads=False, auto_adjust=False)
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-    df.columns = [c.title() for c in df.columns]
-    return df[['Open','High','Low','Close','Volume']].sort_index()
 
 # ────────────────────────────── MAIN ─────────────────────────────────
 
-def main():
+
+if __name__ == "__main__":
     rows: List[Dict[str, Any]] = []
     strat = retall()[0]
     row = run_one("GE", strat,"2005-01-01","2021-01-01",1000, 0.001, 0.01)
     print(row)
-
-if __name__ == "__main__":
-    main()
 

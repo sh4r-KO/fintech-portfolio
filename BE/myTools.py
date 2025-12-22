@@ -12,44 +12,53 @@ import yfinance as yf
 from datetime import date, timedelta
 from datetime import datetime
 
-# ────────────────────────────────────────────────────────────────
-# 1. Symbols (already finished in your file)
-# ────────────────────────────────────────────────────────────────
+BASE_DIR = Path(__file__).resolve().parent   # /app/BE
+thresholds_path = BASE_DIR / "others" / "Indicator_Target_Thresholds.csv"
+
+
 def load_symbols(yaml_path: str | Path = "config.yaml") -> list[str]:
+    '''
+    Load and return the list of symbols from the YAML file.
+    
+    :param yaml_path: Path to the YAML configuration file.
+    :type yaml_path: str | Path
+    :return: List of symbols as strings.
+    :rtype: list[str]
+    '''
+
     with open(yaml_path, "r", encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh) or {}
 
     raw = cfg.get("symbols", [])
     return list(OrderedDict.fromkeys(map(str, raw)))   # dedupe + preserve order
 
-
-# ────────────────────────────────────────────────────────────────
-# 2. Single-value helpers
-# ────────────────────────────────────────────────────────────────
 def _load_cfg(yaml_path: str | Path) -> dict:
-    """Internal shortcut so we don’t reopen the file five times if you
-    decide to call several helpers in a row."""
+    """
+    Load and return the entire YAML config as a dictionary.
+
+    :param yaml_path: Path to the YAML configuration file.
+    :type yaml_path: str | Path
+    :return: Configuration dictionary.
+    :rtype: dict
+    """
     with open(yaml_path, "r", encoding="utf-8") as fh:
         return yaml.safe_load(fh) or {}
-
 
 def load_startDate(yaml_path: str | Path = "config.yaml") -> str:
     """Return the back-test start date as *string* (ISO-8601)."""
     cfg = _load_cfg(yaml_path)
     return str(cfg.get("start"))
 
-
 def load_endDate(yaml_path: str | Path = "config.yaml") -> str:
     """Return the back-test end date as *string* (ISO-8601)."""
+
     cfg = _load_cfg(yaml_path)
     return str(cfg.get("end"))
-
 
 def load_capital(yaml_path: str | Path = "config.yaml") -> float:
     """Return starting cash (float)."""
     cfg = _load_cfg(yaml_path)
     return float(cfg.get("capital", 10_000))
-
 
 def load_comission(yaml_path: str | Path = "config.yaml") -> float:
     """Return commission (fractional, e.g. 0.001 → 0.1 %)."""
@@ -61,29 +70,23 @@ def load_slippage(yaml_path: str | Path = "config.yaml") -> float:
     cfg = _load_cfg(yaml_path)
     return float(cfg.get("slippage", 0.0005))
 
-#def load_output_csv(yaml_path: str | Path = "config.yaml") -> str:
-#    """Return the CSV filename for results."""
-#    cfg = _load_cfg(yaml_path)
-#    return str(cfg.get("output_csv", "results.csv"))
 
 
 def load_strats(yaml_path: str | Path = "config.yaml") -> list[type]:
     """
     Return a list of Backtrader Strategy *classes* whose names appear under
     `strats:` in the YAML file.
-
-        strats:
-          - SmaCross
-          - Rsi2
-          - Rsi2        # duplicate → kept only once
-
-    If the key is missing, empty, "all", or "*", we simply return every
-    class found by strats.retall() – identical to the old behaviour.
+    
+    :param yaml_path: Description
+    :type yaml_path: str | Path
+    :return: Description
+    :rtype: list[type]
     """
+
     from strats import retall as _all_strats
-    cfg  = _load_cfg(yaml_path)                                   # helper ②
-    raw  = cfg.get("strats", [])                                  # list|str|…
-    if raw in ("all", "*") or not raw:                            # no filter
+    cfg  = _load_cfg(yaml_path)                                   
+    raw  = cfg.get("strats", [])                                  
+    if raw in ("all", "*") or not raw:                            
         return _all_strats()
 
     # normalise to list of str
@@ -100,13 +103,14 @@ def load_strats(yaml_path: str | Path = "config.yaml") -> list[type]:
         cls = lut.get(name)
         if cls is None:
             raise ValueError(f"Strategy '{name}' not found in strats.py")
-        if cls not in seen:                                       # de-dupe
+        if cls not in seen:                                       # dedupe
             selected.append(cls)
             seen.add(cls)
 
     return selected
 
 def _find_local_csv(symbol: str, DATA_DIRS) -> Path | None:
+    """Search DATA_DIRS for a CSV file matching symbol*.csv. Return Path or None."""
     for root in DATA_DIRS:
         cand = next(root.glob(f"{symbol}*.csv"), None)
         if cand:
@@ -126,13 +130,8 @@ def filter_available(tickers: list[str]) -> list[str]:
             pass                      # network hiccup or 4xx error → skip
     return ok
 
-
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent   # /app/BE
-thresholds_path = BASE_DIR / "others" / "Indicator_Target_Thresholds.csv"
-
 def load_thresholds(path=thresholds_path) -> dict:
+    """Load indicator target thresholds from CSV into a dictionary."""
     df = pd.read_csv(path)
     thresholds = {}
     for _, row in df.iterrows():
@@ -146,21 +145,30 @@ def load_thresholds(path=thresholds_path) -> dict:
 
 
 def gauge_percent(value, 
-                  vmin=-1.0, vmax=0.0,           # range as fractions (-1 = -100%, 0 = 0%)
-                  marker=None,                   # optional slim marker line
+                  vmin=-1.0, vmax=0.0,           
+                  marker=None,                   
                   title="MaxDrawdown_%", 
                   as_percent=True,
                   color=["#556B2F","#8FA31E","#C6D870","#EFF5D2"]):
     """
     Draw a semi-circular gauge for a percentage-like metric.
 
-    value:      current value (fraction, e.g., -0.39 for -39%).
-                If you pass -39, set as_percent=False (and keep vmin/vmax consistent).
-    vmin/vmax:  min/max of the scale (fractions if as_percent=True).
-    marker:     draw a slim radial marker at this value (clamped for drawing, label shows raw).
-    title:      text above the gauge.
-    as_percent: if True, display with % signs. If False, show raw numbers.
-    color:      list of 4 colors: [primary, secondary, third, fourth].
+    Summary:
+    - Semi-circle from vmin (left) to vmax (right).
+    - Colored arc from vmin to current value.
+    - Needle pointing to current value.
+    - Optional slim red marker line at 'marker' value.
+    - Labels for min, max, and current value.
+    
+    :param value:  current value (fraction, e.g., -0.39 for -39%).If you pass -39, set as_percent=False (and keep vmin/vmax consistent).
+    :param vmin: min of the scale (fractions if as_percent=True).range as fractions (-1 = -100%, 0 = 0%)
+    :param vmax: max of the scale (fractions if as_percent=True).range as fractions (-1 = -100%, 0 = 0%)
+    :param marker: optionnal draw a slim radial marker at this value (clamped for drawing, label shows raw).
+    :param title: text above the gauge.
+    :param as_percent: if True, display with % signs. If False, show raw numbers.
+    :param color: list of 4 colors: [primary, secondary, third, fourth].
+    :return: fig, ax matplotlib figure and axis objects.
+    :rtype:  tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]
     """
     Cprimary, Csecond, Cthird, Cfourth = color
 
@@ -239,30 +247,25 @@ def gauge_percent(value,
 
 
 
-def main():
-
-    symbol = "AAPL"
-    strat = "SmaCross"
-    max_dd = 0.46502059193027323 # Example max drawdown values
-    outdir = "output/graphs"
-    Path(outdir).mkdir(parents=True, exist_ok=True)
-    color = ["#19183B","#708993","#A1C2BD","#E7F2EF"]
-    plot = gauge_percent(-1*max_dd,title=f"{symbol}_{strat}_MaxDrawdown", marker=-0.25, color=color)
-
-
-    plot[0].savefig(f"{outdir}/{symbol}_{strat}_MaxDrawdown.png", dpi=300, bbox_inches="tight")
-    plt.close(plot[0])  # free memory
-    print(f"Saved: {outdir}/{symbol}_{strat}_MaxDrawdown.png")
-
-
 
     
 def _csv_date_bounds(path: Path, dtformat: str) -> tuple[datetime | None, datetime | None]:
+
     """
-    Return (min_dt, max_dt) found in the CSV's first column.
-    Works even if the file is reverse-sorted (newest->oldest).
-    Assumes first column is Date/Datetime and may have a header row.
+    Scan a CSV file for date/time strings in the first column,
+    parse them using dtformat, and return the min and max as datetime objects.
+    Then return (min_dt, max_dt), or (None, None) if no valid dates found.
+    Ignore empty lines and header rows.
+    
+    
+    :param path: path to the CSV file.
+    :type path: Path
+    :param dtformat: date format string for datetime.strptime.
+    :type dtformat: str
+    :return: range of dates found. a tuple (min_dt, max_dt).
+    :rtype: tuple[datetime | None, datetime | None]
     """
+
     min_dt = None
     max_dt = None
     import csv
@@ -293,3 +296,21 @@ def _csv_date_bounds(path: Path, dtformat: str) -> tuple[datetime | None, dateti
                 max_dt = dt
 
     return min_dt, max_dt
+
+
+def main():
+
+    symbol = "AAPL"
+    strat = "SmaCross"
+    max_dd = 0.46502059193027323 # Example max drawdown values
+    outdir = "output/graphs"
+    Path(outdir).mkdir(parents=True, exist_ok=True)
+    color = ["#19183B","#708993","#A1C2BD","#E7F2EF"]
+    plot = gauge_percent(-1*max_dd,title=f"{symbol}_{strat}_MaxDrawdown", marker=-0.25, color=color)
+
+
+    plot[0].savefig(f"{outdir}/{symbol}_{strat}_MaxDrawdown.png", dpi=300, bbox_inches="tight")
+    plt.close(plot[0])  # free memory
+    print(f"Saved: {outdir}/{symbol}_{strat}_MaxDrawdown.png")
+
+
