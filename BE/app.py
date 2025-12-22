@@ -1,43 +1,38 @@
 from fastapi import FastAPI, HTTPException,Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import StreamingResponse
-
+#from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse,JSONResponse,FileResponse
+from datetime import date, timedelta, datetime
 from pydantic import BaseModel, EmailStr,Field, ConfigDict
-from typing import List, Optional
+from typing import List, Optional,Dict, Tuple, Any
 from pathlib import Path
-import json
+#from starlette.requests import Request
+from hashlib import md5
 
 import importlib
 import matplotlib.pyplot as plt
-
 import httpx
-
 import os, io, json, math
-from datetime import date, timedelta, datetime
-
 import time
-from typing import Dict, Tuple, Any
-
-
-from fastapi.responses import JSONResponse
-from starlette.requests import Request
-
-
 import traceback
-
-# app.py
-from fastapi.responses import FileResponse
-from hashlib import md5
 import mimetypes
 
-
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 
 APP_DIR = Path(__file__).parent
 DATA_PATH = APP_DIR / "others" / "projects.json"
 
-app = FastAPI(title="Fintech Portfolio API", version="1.0.0")
 
+GRAPHS_DIR = APP_DIR / "backtrade" / "output" / "graphs"
+GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+app = FastAPI(
+    title="Fintech Portfolio API",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 class Link(BaseModel):
     github: Optional[str] = None
@@ -76,9 +71,14 @@ def refresh_data():
         print(f"[startup] ERROR loading data: {e}")
         PROJECTS, INDEX_BY_SLUG = [], {}
 
-@app.on_event("startup")
-def on_startup():
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
     refresh_data()
+    yield
+    # shutdown (optional cleanup)
 
 @app.get("/api/health")
 def health():
@@ -526,9 +526,7 @@ async def stocks_plot(payload: StockInput):
 
 
 
-APP_DIR = Path(__file__).parent
-GRAPHS_DIR = APP_DIR / "backtrade" / "output" / "graphs"
-GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 
 
@@ -551,7 +549,6 @@ class BacktestRequest(BaseModel):
 
 
 def _resolve_strategy(name: str):
-    import importlib
     strats_mod = importlib.import_module("strats")
     lut = {cls.__name__: cls for cls in strats_mod.retall()}
     if name not in lut:
@@ -690,14 +687,14 @@ def get_graph(name: str):
 
 
 
-ROOT_DIR = APP_DIR.parent          # .../fintech-portfolio
-FE_DIR = ROOT_DIR / "FE"           # .../fintech-portfolio/FE#TODO this hsouldnt be accessible from here???(where app.py currently is)
-
-if FE_DIR.exists():
-    # Serve all FE files (html, css, js, images) under "/"
-    app.mount(
-        "/",
-        StaticFiles(directory=FE_DIR, html=True),
-        name="frontend",
-    )
+#ROOT_DIR = APP_DIR.parent          # .../fintech-portfolio
+#FE_DIR = ROOT_DIR / "FE"           # .../fintech-portfolio/FE#TODO this hsouldnt be accessible from here???(where app.py currently is)
+#
+#if FE_DIR.exists():
+#    # Serve all FE files (html, css, js, images) under "/"
+#    app.mount(
+#        "/",
+#        StaticFiles(directory=FE_DIR, html=True),
+#        name="frontend",
+#    )
 
