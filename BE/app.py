@@ -31,6 +31,7 @@ GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
 async def lifespan(app: FastAPI):
     # startup
     refresh_data()
+    
     yield
     # shutdown (optional cleanup)
 
@@ -52,10 +53,14 @@ class Metrics(BaseModel):
 
 class Project(BaseModel):
     id: str; slug: str; title: str; summary: str
-    tags: List[str] = []; tech: List[str] = []
-    problem: Optional[str] = None; approach: Optional[str] = None
-    results: Optional[str] = None; cover_image: Optional[str] = None
-    links: Optional[Link] = None; metrics: Optional[Metrics] = None
+    tags: List[str] = Field(default_factory=list)
+    tech: List[str] = Field(default_factory=list)
+    problem: Optional[str] = None
+    approach: Optional[str] = None
+    results: Optional[str] = None
+    cover_image: Optional[str] = None
+    links: Optional[Link] = None
+    metrics: Optional[Metrics] = None
 
 class Contact(BaseModel):
     name: str; email: EmailStr; message: str
@@ -105,8 +110,9 @@ def get_project(slug: str):
 
 @app.post("/api/contact")
 def contact(payload: Contact):
-    (APP_DIR / "contact_inbox.txt").write_text(
-        f"{payload.name} <{payload.email}>: {payload.message}\n", encoding="utf-8")
+    inbox = APP_DIR / "contact_inbox.txt"
+    with inbox.open("a", encoding="utf-8") as f:
+        f.write(f"[{datetime.utcnow().isoformat()}Z] {payload.name} <{payload.email}>: {payload.message}\n")
     return {"ok": True}
 
 
@@ -636,15 +642,15 @@ def api_backtest(req: BacktestRequest):
 
 
 
-@app.exception_handler(Exception)
-async def unhandled_exceptions(_: Request, exc: Exception):
-    if isinstance(exc, HTTPException):
-        raise exc  # let FastAPI handle it normally
-
-    return JSONResponse(
-        status_code=500,
-        content={"detail": str(exc)}
-    )
+#@app.exception_handler(Exception)
+#async def unhandled_exceptions(_: Request, exc: Exception):
+#    if isinstance(exc, HTTPException):
+#        raise exc  # let FastAPI handle it normally
+#
+#    return JSONResponse(
+#        status_code=500,
+#        content={"detail": str(exc)}
+#    )
 
 @app.get("/api/ping")
 def ping():
@@ -656,7 +662,7 @@ def _clear_plots():
         try:
             p.unlink()
         except Exception as e:
-            raise HTTPException(500, p, "error : _clear_plots : image not found")
+            raise HTTPException(status_code=500, detail=f"Failed deleting {p}: {e}")
 
 
 
