@@ -27,6 +27,12 @@ DATA_PATH = APP_DIR / "others" / "projects.json"
 GRAPHS_DIR = APP_DIR / "backtrade" / "output" / "graphs"
 GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
+    refresh_data()
+    yield
+    # shutdown (optional cleanup)
 
 app = FastAPI(
     title="Fintech Portfolio API",
@@ -73,12 +79,7 @@ def refresh_data():
 
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # startup
-    refresh_data()
-    yield
-    # shutdown (optional cleanup)
+
 
 @app.get("/api/health")
 def health():
