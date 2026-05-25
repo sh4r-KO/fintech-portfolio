@@ -23,5 +23,10 @@ sudo docker run --rm -p 8000:8080 --env-file .env fintech-full
 
 using the Dockerfile.full
 
+linux
 
 sudo docker build -f Dockerfile.full -t fintech-full . && sudo docker run --rm -p 8000:8080 --env-file .env fintech-full
+
+
+nobara
+podman build -f Dockerfile.full -t fintech-full . && podman run --rm -p 8000:8080 --env-file .env fintech-full

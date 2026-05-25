@@ -7,7 +7,7 @@ import math
 
 import inspect, sys, backtrader as bt
 
-def retall():
+def return_all():
     """
     Return a list of all Strategy subclasses defined in this module.
     """
@@ -28,6 +28,7 @@ class GoldenCross(bt.Strategy):
     Buy when SMA-50 crosses above SMA-200; exit when it crosses back.
     """
     params = dict(fast=50, slow=200)
+
 
     def __init__(self):
         sma_fast = bt.ind.SMA(period=self.p.fast)

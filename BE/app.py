@@ -1,12 +1,12 @@
 from fastapi import FastAPI, HTTPException,Request
 from fastapi.middleware.cors import CORSMiddleware
-#from fastapi.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse,JSONResponse,FileResponse
 from datetime import date, timedelta, datetime
 from pydantic import BaseModel, EmailStr,Field, ConfigDict
 from typing import List, Optional,Dict, Tuple, Any
 from pathlib import Path
-#from starlette.requests import Request
+from starlette.requests import Request
 from hashlib import md5
 
 import importlib
@@ -108,6 +108,7 @@ def get_project(slug: str):
     if not p: raise HTTPException(status_code=404, detail="Project not found")
     return p
 
+#TODO: this is just bad, should be deleted.
 @app.post("/api/contact")
 def contact(payload: Contact):
     inbox = APP_DIR / "contact_inbox.txt"
@@ -178,9 +179,10 @@ def compound(payload: CompoundInput):
             interest=interest_val
         ))
         # advance one period
-        balance *= (1 + r / n)
-        balance += contrib
-        total_contrib += contrib
+        if k < periods:
+            balance *= (1 + r / n)
+            balance += contrib
+            total_contrib += contrib
 
     final = points[-1].balance
     total_interest = final - P - total_contrib
@@ -220,9 +222,10 @@ def compound_plot(payload: CompoundInput):
         contribs.append(total_contrib)
         interests.append(interest_val)
 
-        balance *= (1 + r / n)
-        balance += contrib
-        total_contrib += contrib
+        if k < periods:
+            balance *= (1 + r / n)
+            balance += contrib
+            total_contrib += contrib
 
     # ---- Make plot ----
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -694,14 +697,14 @@ def get_graph(name: str):
 
 
 
-#ROOT_DIR = APP_DIR.parent          # .../fintech-portfolio
-#FE_DIR = ROOT_DIR / "FE"           # .../fintech-portfolio/FE#TODO this hsouldnt be accessible from here???(where app.py currently is)
+ROOT_DIR = APP_DIR.parent          # .../fintech-portfolio
+FE_DIR = ROOT_DIR / "FE"           # .../fintech-portfolio/FE#TODO this hsouldnt be accessible from here???(where app.py currently is)
 #
-#if FE_DIR.exists():
-#    # Serve all FE files (html, css, js, images) under "/"
-#    app.mount(
-#        "/",
-#        StaticFiles(directory=FE_DIR, html=True),
-#        name="frontend",
-#    )
+if FE_DIR.exists():
+    # Serve all FE files (html, css, js, images) under "/"
+    app.mount(
+        "/",
+        StaticFiles(directory=FE_DIR, html=True),
+        name="frontend",
+    )
 
