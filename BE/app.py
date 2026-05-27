@@ -197,35 +197,22 @@ def compound(payload: CompoundInput):
 
 @app.post("/api/finance/compound/plot")
 def compound_plot(payload: CompoundInput):
-    P = payload.principal
-    r = payload.rate_pct / 100.0
-    n = payload.compounds_per_year
-    t_years = payload.years
-    contrib = payload.contribution
 
-    periods = int(n * t_years)
-    balance = P
-    total_contrib = 0.0
+    results = compound(payload)
 
     times = []
     balances = []
     principals = []
     contribs = []
     interests = []
+    for p in results.points :
+        times.append(p.t)
+        balances.append(p.balance)
+        principals.append(p.P)
+        contribs.append(p.total_contrib)
+        interests.append(p.interest_val)
 
-    for k in range(periods + 1):
-        t = k / n
-        interest_val = balance - P - total_contrib
-        times.append(t)
-        balances.append(balance)
-        principals.append(P)
-        contribs.append(total_contrib)
-        interests.append(interest_val)
 
-        if k < periods:
-            balance *= (1 + r / n)
-            balance += contrib
-            total_contrib += contrib
 
     # ---- Make plot ----
     fig, ax = plt.subplots(figsize=(6, 4))

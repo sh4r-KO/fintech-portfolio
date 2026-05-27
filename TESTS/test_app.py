@@ -1,7 +1,7 @@
 import pytest
 import json
 from BE import app as app_module
-from BE.app import compound, CompoundInput
+from BE.app import compound, CompoundInput, fx_currencies
 
 
 #pytest TESTS/test_app.py -W ignore::UserWarning
@@ -244,3 +244,20 @@ class Test_app:
     def test_negative_rate_rejected(self):
         with pytest.raises(Exception):
             CompoundInput(principal=1000, rate_pct=-5, years=1, compounds_per_year=1, contribution=0)
+
+    def test_compound_plot_not_empty(self):
+        payload = CompoundInput(principal=1000, rate_pct=10, years=2, compounds_per_year=1, contribution=0)
+        response = app_module.compound_plot(payload)
+        assert len(response.body) > 100, "PNG too small, likely empty"
+
+    def test_fx_currencies(self):
+        assert len(fx_currencies()) > 0
+    #________________________________________
+    #________fx_currencies TESTS_____________
+    #________________________________________
+    '''Valid pair (USD→EUR) with a multi-month range returns two lists of equal length, dates sorted ascending, all rates are positive floats
+Different base/quote (GBP→JPY) works the same way
+A range spanning exactly two business days returns at least 2 data points (minimum needed)'''
+
+    def test__fetch_timeseries(self):
+        pass
