@@ -1,5 +1,5 @@
 # fintech-portfolio/Dockerfile.full (Alpine, no BuildKit)
-FROM python:3.11-alpine
+FROM docker.io/library/python:3.11-alpine
 
 WORKDIR /app
 
@@ -27,5 +27,5 @@ COPY BE /app/BE
 COPY FE /app/FE
 
 EXPOSE 8080
-#CMD ["uvicorn", "BE.app:app", "--host", "0.0.0.0", "--port", "8080"]
-CMD uvicorn BE.app:app --host 0.0.0.0 --port $PORT
+# CMD ["uvicorn", "BE.app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD uvicorn BE.app:app --host 0.0.0.0 --port ${PORT:-8080}

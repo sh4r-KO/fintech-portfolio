@@ -208,16 +208,16 @@ def compound_plot(payload: CompoundInput):
     for p in results.points :
         times.append(p.t)
         balances.append(p.balance)
-        principals.append(p.P)
-        contribs.append(p.total_contrib)
-        interests.append(p.interest_val)
+        principals.append(p.principal)
+        contribs.append(p.contributed)
+        interests.append(p.interest)
 
 
 
     # ---- Make plot ----
     fig, ax = plt.subplots(figsize=(6, 4))
 
-    base = [P + tc for tc in contribs]  # principal + total contributions at each time
+    base = [results.principal + tc for tc in contribs]  # principal + total contributions at each time
 
     # Fill the base amount
     ax.fill_between(times, 0, base, alpha=0.35, color="#9ecae1", label="Principal + Contrib")
