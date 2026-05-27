@@ -443,17 +443,20 @@ def _parse_alpha_series(js):
 
 
 
-_ALPHA_CACHE: Dict[str, Tuple[float, Any]] = {}
-_ALPHA_TTL_SECONDS = 60  # 1 minute
+
+CACHE_DIR = Path(__file__).parent / "alpha_cache"
+CACHE_DIR.mkdir(exist_ok=True)
+_ALPHA_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 async def _fetch_monthly_adjusted(symbol: str):
     if not ALPHA_KEY:
         raise HTTPException(status_code=500, detail="ALPHAVANTAGE_API_KEY not configured")
 
-    now = time.time()
-    hit = _ALPHA_CACHE.get(symbol)
-    if hit and (now - hit[0]) < _ALPHA_TTL_SECONDS:
-        return hit[1]
+    cache_file = CACHE_DIR / f"{symbol}.json"
+    if cache_file.exists():
+        age = time.time() - cache_file.stat().st_mtime
+        if age < _ALPHA_TTL_SECONDS:
+            return json.loads(cache_file.read_text())
 
     url = (
         "https://www.alphavantage.co/query"
@@ -464,7 +467,13 @@ async def _fetch_monthly_adjusted(symbol: str):
         r.raise_for_status()
         data = r.json()
 
-    _ALPHA_CACHE[symbol] = (now, data)
+    # Only cache real responses, not rate-limit errors
+    if "Monthly Adjusted Time Series" in data:
+        cache_file.write_text(json.dumps(data))
+    else:
+        # Surface the error message clearly
+        msg = data.get("Note") or data.get("Information") or data.get("Error Message") or str(data)
+        raise HTTPException(status_code=429, detail=f"Alpha Vantage: {msg}")
     return data
 
 @app.post("/api/stocks/series", response_model=StockSeriesOut)
