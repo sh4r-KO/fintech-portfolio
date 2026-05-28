@@ -12,3 +12,6 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# stock data cache
+BE/alpha_cache/

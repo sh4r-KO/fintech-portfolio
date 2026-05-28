@@ -147,7 +147,7 @@ def load_thresholds(path=thresholds_path) -> dict:
 def gauge_percent(value, 
                   vmin=-1.0, vmax=0.0,           
                   marker=None,                   
-                  title="MaxDrawdown_%", 
+                  title="MaxDrawdown_pct",
                   as_percent=True,
                   color=["#556B2F","#8FA31E","#C6D870","#EFF5D2"]):
     """
