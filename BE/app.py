@@ -543,7 +543,7 @@ class BacktestRequest(BaseModel):
 
 def _resolve_strategy(name: str):
     strats_mod = importlib.import_module("strats")
-    lut = {cls.__name__: cls for cls in strats_mod.retall()}
+    lut = {cls.__name__: cls for cls in strats_mod.return_all()}
     if name not in lut:
         raise HTTPException(status_code=400, detail=f"Unknown strategy name: {name}")
     return lut[name]
@@ -551,7 +551,7 @@ def _resolve_strategy(name: str):
 @app.get("/api/strategies")
 def api_strategies():
     mod = importlib.import_module("strats")
-    return {"items": [cls.__name__ for cls in mod.retall()]}
+    return {"items": [cls.__name__ for cls in mod.return_all()]}
 
 
 
@@ -606,9 +606,9 @@ def api_backtest(req: BacktestRequest):
         )
 
     png_names = [
-        "Calmar.png","MaxDrawdown_%.png","ProfitFactor.png","rnorm100_%.png",
+        "Calmar.png","MaxDrawdown_pct.png","ProfitFactor.png","rnorm100_pct.png",
         "SharpeAnnual.png","SharpeDaily.png","Sortino.png","SQN.png",
-        "TimeDD_bars.png","TotalReturn_%.png","VWR.png","WinRate_%.png"
+        "TimeDD_bars.png","TotalReturn_pct.png","VWR.png","WinRate_pct.png"
     ]
     charts = [f"/graphs/{n}" for n in png_names if (GRAPHS_DIR / n).exists()]
 
