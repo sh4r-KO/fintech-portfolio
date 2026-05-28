@@ -394,16 +394,16 @@ def run_one(symbol: str, strat_cls, start_date: str, end_date: str, starting_cap
     ret = {
         "Symbol": symbol,
         "Strategy": strat_cls.__name__,
-        "TotalReturn_%": total_ret,
-        "rnorm100_%": rnorm100,
+        "TotalReturn_pct": total_ret,
+        "rnorm100_pct": rnorm100,
         "SharpeDaily": sharpe_d,
         "SharpeAnnual": sharpe_ann,
         "Calmar": calmar,
-        "MaxDrawdown_%": max_dd,
+        "MaxDrawdown_pct": max_dd,
         "TimeDD_bars": -td_dd,
         "VWR": vwr,
         "SQN": sqn,
-        "WinRate_%": win_rate,
+        "WinRate_pct": win_rate,
         "ProfitFactor": profit_factor,
         "AvgTradePL": avg_trade_pl,
         "trades_total":trades_total,
@@ -440,7 +440,7 @@ def creategraph(row: dict, thresholds: dict) -> None:
             continue
 
         # Match thresholds row
-        th = thresholds.get(metric_name.replace("_%", "").replace("_", " "), None)
+        th = thresholds.get(metric_name.replace("_pct", "").replace("_", " "), None)
         if th is None:
             print(f"[WARN]backtradercsvexport.creategraph : No thresholds for {metric_name}, skipping")
             continue

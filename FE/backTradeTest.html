@@ -136,8 +136,8 @@ const ABS = (u) => {
       // ----- KPIs (numbers) -----
       const m = out?.metrics || {};
       const order = [
-        'Symbol','Strategy','TotalReturn_%','rnorm100_%','SharpeDaily','SharpeAnnual',
-        'Calmar','MaxDrawdown_%','TimeDD_bars','VWR','SQN','WinRate_%',
+        'Symbol','Strategy','TotalReturn_pct','rnorm100_pct','SharpeDaily','SharpeAnnual',
+        'Calmar','MaxDrawdown_pct','TimeDD_bars','VWR','SQN','WinRate_pct',
         'ProfitFactor','AvgTradePL','trades_total','Sortino'
       ];
       const rows = [];
@@ -161,9 +161,9 @@ const ABS = (u) => {
 
       // ----- KPI images grid (12 PNGs in fixed order; only those returned) -----
       const KPI_ORDER = [
-        "Calmar.png","MaxDrawdown_%.png","ProfitFactor.png","rnorm100_%.png",
+        "Calmar.png","MaxDrawdown_pct.png","ProfitFactor.png","rnorm100_pct.png",
         "SharpeAnnual.png","SharpeDaily.png","Sortino.png","SQN.png",
-        "TimeDD_bars.png","TotalReturn_%.png","VWR.png","WinRate_%.png"
+        "TimeDD_bars.png","TotalReturn_pct.png","VWR.png","WinRate_pct.png"
       ];
       const urls = Array.isArray(out?.charts) ? out.charts.map(ABS) : [];
       const ordered = KPI_ORDER
