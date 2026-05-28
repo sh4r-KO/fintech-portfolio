@@ -372,12 +372,17 @@ async def fx_plot(payload: FXInput):
     plt.savefig(buf, format="png")
     plt.close(fig); buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
+
+
+
 # --- Stocks (Alpha Vantage: Monthly Adjusted) ---
 
 
+# --- Stocks (yfinance: Monthly Adjusted) ---
 
+import yfinance as yf
+import pandas as pd
 
-ALPHA_KEY = os.getenv("ALPHAVANTAGE_API_KEY")  # set this in Cloud Run/env
 class StockInput(BaseModel):
     symbol: str
     period: str = Field(pattern="^(1mo|3mo|6mo|1y|5y|10y|ytd|max)$")
@@ -396,7 +401,6 @@ class StockSeriesOut(BaseModel):
     close_last: float
     change_abs: float
     change_pct: float
-    # We return just meta; plotting handled by /plot. (Add points if you want.)
 
 _PERIOD_TO_DAYS = {
     "1mo": 30, "3mo": 90, "6mo": 180, "1y": 365,
@@ -416,72 +420,59 @@ def _filter_period(dates, closes, period):
             out_d.append(d); out_c.append(c)
     return out_d, out_c
 
-def _parse_alpha_series(js):
-    KEY = "Monthly Adjusted Time Series"
-    if KEY not in js:
-        msg = (
-            js.get("Note")
-            or js.get("Information")
-            or js.get("Error Message")
-            or f"Unexpected response keys: {list(js.keys())}"
-        )
-        raise HTTPException(status_code=502, detail=msg)
-    series = js[KEY]
-    dates, closes = [], []
-    for k, v in series.items():
-        try:
-            dt = datetime.strptime(k, "%Y-%m-%d").date()
-            cv = float(v.get("4. close") or v.get("5. adjusted close") or v.get("4. Close", 0.0))
-            dates.append(dt); closes.append(cv)
-        except Exception:
-            pass
-    z = sorted(zip(dates, closes), key=lambda x: x[0])
-    dates = [d for d,_ in z]; closes = [c for _,c in z]
-    if len(dates) < 2:
-        raise HTTPException(status_code=502, detail="Alpha Vantage returned too few rows.")
-    return dates, closes
 
-
-
-
-CACHE_DIR = Path(__file__).parent / "alpha_cache"
+CACHE_DIR = Path(__file__).parent / "stock_cache"
 CACHE_DIR.mkdir(exist_ok=True)
-_ALPHA_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
+_STOCK_TTL_SECONDS = 60 * 60 * 24  # 1 day (monthly data, daily is plenty)
 
-async def _fetch_monthly_adjusted(symbol: str):
-    if not ALPHA_KEY:
-        raise HTTPException(status_code=500, detail="ALPHAVANTAGE_API_KEY not configured")
+
+def _fetch_monthly_adjusted(symbol: str):
+    """Fetch monthly adjusted close prices via yfinance, with disk cache.
+    Returns (dates: list[date], closes: list[float]) sorted ascending."""
 
     cache_file = CACHE_DIR / f"{symbol}.json"
     if cache_file.exists():
         age = time.time() - cache_file.stat().st_mtime
-        if age < _ALPHA_TTL_SECONDS:
-            return json.loads(cache_file.read_text())
+        if age < _STOCK_TTL_SECONDS:
+            cached = json.loads(cache_file.read_text())
+            dates = [datetime.strptime(d, "%Y-%m-%d").date() for d in cached["dates"]]
+            return dates, cached["closes"]
 
-    url = (
-        "https://www.alphavantage.co/query"
-        f"?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol={symbol}&apikey={ALPHA_KEY}"
-    )
-    async with httpx.AsyncClient(timeout=20) as client:
-        r = await client.get(url)
-        r.raise_for_status()
-        data = r.json()
+    try:
+        ticker = yf.Ticker(symbol)
+        # auto_adjust=True gives adjusted close in the 'Close' column
+        df = ticker.history(period="max", interval="1mo", auto_adjust=True)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"yfinance error: {e}")
 
-    # Only cache real responses, not rate-limit errors
-    if "Monthly Adjusted Time Series" in data:
-        cache_file.write_text(json.dumps(data))
-    else:
-        # Surface the error message clearly
-        msg = data.get("Note") or data.get("Information") or data.get("Error Message") or str(data)
-        raise HTTPException(status_code=429, detail=f"Alpha Vantage: {msg}")
-    return data
+    if df.empty:
+        raise HTTPException(status_code=404, detail=f"No data found for symbol '{symbol}'")
+
+    df = df.dropna(subset=["Close"])
+    dates = [d.date() for d in df.index.to_pydatetime()]
+    closes = [float(c) for c in df["Close"].tolist()]
+
+    if len(dates) < 2:
+        raise HTTPException(status_code=502, detail="Too few rows returned")
+
+    # Sort ascending (yfinance returns ascending already, but be safe)
+    z = sorted(zip(dates, closes), key=lambda x: x[0])
+    dates = [d for d, _ in z]
+    closes = [c for _, c in z]
+
+    # Cache successful response
+    cache_file.write_text(json.dumps({
+        "dates": [d.isoformat() for d in dates],
+        "closes": closes,
+    }))
+
+    return dates, closes
+
 
 @app.post("/api/stocks/series", response_model=StockSeriesOut)
-async def stocks_series(payload: StockInput):
-    #raise HTTPException(status_code=501, detail="app.py 455")
+def stocks_series(payload: StockInput):
     sym = payload.symbol.strip().upper()
-    js = await _fetch_monthly_adjusted(sym)
-    dates, closes = _parse_alpha_series(js)
+    dates, closes = _fetch_monthly_adjusted(sym)
     dates, closes = _filter_period(dates, closes, payload.period)
     if len(dates) < 2:
         raise HTTPException(status_code=502, detail="No rows after filtering")
@@ -496,18 +487,15 @@ async def stocks_series(payload: StockInput):
     )
 
 
-
 @app.post("/api/stocks/plot")
-async def stocks_plot(payload: StockInput):
+def stocks_plot(payload: StockInput):
     sym = payload.symbol.strip().upper()
-    js = await _fetch_monthly_adjusted(sym)
-    dates, closes = _parse_alpha_series(js)
+    dates, closes = _fetch_monthly_adjusted(sym)
     dates, closes = _filter_period(dates, closes, payload.period)
 
     X = list(range(len(dates)))
     fig, ax = plt.subplots(figsize=(7.6, 4.2))
 
-    # Filled area under the curve + line on top
     ax.fill_between(X, 0, closes, alpha=0.25, color="#9ecae1", label="Close (area)")
     ax.plot(X, closes, linewidth=1.6, color="#1f77b4", label="Close")
 
@@ -529,7 +517,6 @@ async def stocks_plot(payload: StockInput):
     plt.savefig(buf, format="png")
     plt.close(fig); buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
-
 
 
 
