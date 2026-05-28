@@ -37,7 +37,7 @@ SYMBOLS = ["SPY", "QQQ", "MTUM","EEM","TLT","GLD","IEF","MSFT", "AAPL", "NVDA","
 SYMBOLS = load_symbols(CONFIG_FILE)
 
 
-STRATEGIES = retall()
+STRATEGIES = return_all()
 STRATEGIES = load_strats(CONFIG_FILE)
 
 MINBARS = 80 #252 before when the fremim of AV was better
@@ -479,7 +479,7 @@ def creategraph(row: dict, thresholds: dict) -> None:
 
 if __name__ == "__main__":
     rows: List[Dict[str, Any]] = []
-    strat = retall()[0]
+    strat = return_all()[0]
     row = run_one("GE", strat,"2005-01-01","2021-01-01",1000, 0.001, 0.01)
     print(row)
 

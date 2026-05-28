@@ -543,7 +543,7 @@ class BacktestRequest(BaseModel):
 
 def _resolve_strategy(name: str):
     strats_mod = importlib.import_module("strats")
-    lut = {cls.__name__: cls for cls in strats_mod.retall()}
+    lut = {cls.__name__: cls for cls in strats_mod.return_all()}
     if name not in lut:
         raise HTTPException(status_code=400, detail=f"Unknown strategy name: {name}")
     return lut[name]
@@ -551,7 +551,7 @@ def _resolve_strategy(name: str):
 @app.get("/api/strategies")
 def api_strategies():
     mod = importlib.import_module("strats")
-    return {"items": [cls.__name__ for cls in mod.retall()]}
+    return {"items": [cls.__name__ for cls in mod.return_all()]}
 
 
 

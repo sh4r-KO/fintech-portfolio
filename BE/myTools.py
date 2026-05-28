@@ -83,7 +83,7 @@ def load_strats(yaml_path: str | Path = "config.yaml") -> list[type]:
     :rtype: list[type]
     """
 
-    from strats import retall as _all_strats
+    from strats import return_all as _all_strats
     cfg  = _load_cfg(yaml_path)                                   
     raw  = cfg.get("strats", [])                                  
     if raw in ("all", "*") or not raw:                            
